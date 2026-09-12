@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>🔐 Acceso Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="login-box">
+        <h1>🔐 Panel del Dueño</h1>
+        <form method="POST">
+            <input type="password" name="password" placeholder="Contraseña" required autofocus>
+            <button type="submit">Entrar</button>
+        </form>
+        {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    </div>
+</body>
+</html>

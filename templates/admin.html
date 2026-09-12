@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚙️ Menú - Mi Restaurante</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="admin-nav">
+        <a href="/admin/pedidos" class="nav-link">🛎️ Pedidos</a>
+        <a href="/admin" class="nav-link activo">⚙️ Menú</a>
+        <a href="/admin/reportes" class="nav-link">📊 Reportes</a>
+        <a href="/" target="_blank" class="nav-link">👁️ Ver cliente</a>
+        <a href="/admin/logout" class="nav-link salir">🚪 Salir</a>
+    </nav>
+
+    <main style="max-width: 1400px; padding: 2rem 1.5rem; margin: auto;">
+        <h1 style="color: #1d3557; margin-bottom: 1.5rem;">⚙️ Gestión del Menú</h1>
+
+        <div class="card-form">
+            <h2>➕ Agregar nuevo platillo</h2>
+            <form id="form-agregar" class="form-grid">
+                <div class="campo">
+                    <label>Emoji</label>
+                    <input type="text" id="nuevo-emoji" placeholder="🍔" value="🍽️" maxlength="3">
+                </div>
+                <div class="campo">
+                    <label>Nombre</label>
+                    <input type="text" id="nuevo-nombre" placeholder="Ej: Hot Dog" required>
+                </div>
+                <div class="campo">
+                    <label>Clave (sin espacios)</label>
+                    <input type="text" id="nueva-clave" placeholder="Ej: hotdog" required>
+                </div>
+                <div class="campo">
+                    <label>Precio (Q)</label>
+                    <input type="number" id="nuevo-precio" step="0.01" placeholder="30.00" required>
+                </div>
+                <div class="campo">
+                    <label>Color</label>
+                    <input type="color" id="nuevo-color" value="#e63946">
+                </div>
+                <div class="campo" style="grid-column: 1 / -1;">
+                    <label>Descripción</label>
+                    <input type="text" id="nueva-desc" placeholder="Ej: Con mostaza y ketchup">
+                </div>
+                <button type="submit" class="btn-primario" style="grid-column: 1 / -1;">➕ Agregar platillo</button>
+            </form>
+        </div>
+
+        <h2 style="color: #1d3557; margin: 2rem 0 1rem;">📋 Platillos actuales</h2>
+        <div id="grid-platillos" class="grid-admin">
+            {% for clave, item in menu.items() %}
+            <div class="admin-platillo" data-clave="{{ clave }}" style="--color: {{ item.color|default('#888') }};">
+                <div class="admin-platillo-header">
+                    <input type="text" class="in-emoji" value="{{ item.emoji|default('🍽️') }}" maxlength="3">
+                    <span class="badge-estado {{ 'visible' if item.activo else 'oculto' }}">
+                        {{ '👁️ Visible' if item.activo else '🚫 Oculto' }}
+                    </span>
+                </div>
+                <input type="text" class="in-nombre" value="{{ item.nombre }}" placeholder="Nombre">
+                <input type="text" class="in-desc" value="{{ item.descripcion|default('') }}" placeholder="Descripción">
+                <div class="admin-platillo-precio">
+                    <span>Q</span>
+                    <input type="number" class="in-precio" value="{{ item.precio }}" step="0.01">
+                </div>
+                <div class="admin-platillo-acciones">
+                    <button class="btn-guardar" onclick="guardar('{{ clave }}')">💾 Guardar</button>
+                    <button class="btn-toggle" onclick="toggle('{{ clave }}')">
+                        {{ '🚫' if item.activo else '👁️' }}
+                    </button>
+                    <button class="btn-eliminar" onclick="eliminar('{{ clave }}')">🗑️</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <script>
+        async function llamarAPI(payload) {
+            const res = await fetch("/admin/guardar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload),
+            });
+            return res.json();
+        }
+
+        document.getElementById("form-agregar").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+                accion: "agregar",
+                clave: document.getElementById("nueva-clave").value,
+                nombre: document.getElementById("nuevo-nombre").value,
+                precio: document.getElementById("nuevo-precio").value,
+                descripcion: document.getElementById("nueva-desc").value,
+                emoji: document.getElementById("nuevo-emoji").value,
+                color: document.getElementById("nuevo-color").value,
+            };
+            const r = await llamarAPI(data);
+            if (r.ok) location.reload();
+            else alert("❌ " + r.error);
+        });
+
+        async function guardar(clave) {
+            const card = document.querySelector('.admin-platillo[data-clave="' + clave + '"]');
+            const data = {
+                accion: "editar",
+                clave: clave,
+                nombre: card.querySelector(".in-nombre").value,
+                precio: card.querySelector(".in-precio").value,
+                descripcion: card.querySelector(".in-desc").value,
+                emoji: card.querySelector(".in-emoji").value,
+            };
+            const r = await llamarAPI(data);
+            if (r.ok) {
+                card.style.background = "#d4edda";
+                setTimeout(() => card.style.background = "", 800);
+            } else {
+                alert("❌ " + r.error);
+            }
+        }
+
+        async function toggle(clave) {
+            const r = await llamarAPI({accion: "toggle", clave: clave});
+            if (r.ok) location.reload();
+            else alert("❌ " + r.error);
+        }
+
+        async function eliminar(clave) {
+            if (!confirm("¿Eliminar este platillo permanentemente?")) return;
+            const r = await llamarAPI({accion: "eliminar", clave: clave});
+            if (r.ok) location.reload();
+            else alert("❌ " + r.error);
+        }
+    </script>
+</body>
+</html>

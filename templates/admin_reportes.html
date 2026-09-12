@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Reportes - Mi Restaurante</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="admin-nav">
+        <a href="/admin/pedidos" class="nav-link">🛎️ Pedidos</a>
+        <a href="/admin" class="nav-link">⚙️ Menú</a>
+        <a href="/admin/reportes" class="nav-link activo">📊 Reportes</a>
+        <a href="/" target="_blank" class="nav-link">👁️ Ver cliente</a>
+        <a href="/admin/logout" class="nav-link salir">🚪 Salir</a>
+    </nav>
+
+    <main style="max-width: 1400px; padding: 2rem 1.5rem; margin: auto;">
+        <h1 style="color: #1d3557; margin-bottom: 1.5rem;">📊 Reportes de Ventas</h1>
+
+        <div class="filtros" style="margin-bottom: 1.5rem;">
+            <button class="filtro activo" data-periodo="dia">📅 Hoy</button>
+            <button class="filtro" data-periodo="semana">📆 Esta semana</button>
+            <button class="filtro" data-periodo="mes">🗓️ Este mes</button>
+        </div>
+
+        <button class="btn-primario" onclick="exportarExcel()" style="margin-bottom: 1.5rem;">
+            📥 Descargar reporte en Excel
+        </button>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="--stat-color: #2a9d8f;">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <span class="stat-label">Ventas</span>
+                    <strong class="stat-value" id="rep-ventas">Q0.00</strong>
+                </div>
+            </div>
+            <div class="stat-card" style="--stat-color: #f4a261;">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <span class="stat-label">Pedidos</span>
+                    <strong class="stat-value" id="rep-pedidos">0</strong>
+                </div>
+            </div>
+            <div class="stat-card" style="--stat-color: #e63946;">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                    <span class="stat-label">Promedio</span>
+                    <strong class="stat-value" id="rep-promedio">Q0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="color: #1d3557; margin: 2rem 0 1rem;">🏆 Productos más vendidos</h2>
+        <div id="tabla-productos" class="tabla-productos">
+            <p class="vacio">Sin datos</p>
+        </div>
+
+        <h2 style="color: #1d3557; margin: 2rem 0 1rem;">📋 Detalle de pedidos</h2>
+        <div id="tabla-pedidos" class="tabla-reporte">
+            <p class="vacio">Sin pedidos en este período</p>
+        </div>
+    </main>
+
+    <script>
+        let periodoActual = "dia";
+
+        async function cargarReporte() {
+            const res = await fetch("/admin/reportes/datos?periodo=" + periodoActual);
+            const data = await res.json();
+            if (!data.ok) return;
+
+            document.getElementById("rep-ventas").textContent = "Q" + data.total_ventas.toFixed(2);
+            document.getElementById("rep-pedidos").textContent = data.cantidad;
+            document.getElementById("rep-promedio").textContent = "Q" + data.promedio.toFixed(2);
+
+            const tablaProd = document.getElementById("tabla-productos");
+            if (data.productos.length === 0) {
+                tablaProd.innerHTML = '<p class="vacio">Sin datos</p>';
+            } else {
+                tablaProd.innerHTML = data.productos.map(p =>
+                    '<div class="producto-fila">' +
+                        '<div class="producto-info">' +
+                            '<strong>' + p.nombre + '</strong>' +
+                            '<small>Q' + p.precio.toFixed(2) + ' c/u</small>' +
+                        '</div>' +
+                        '<div class="producto-stats">' +
+                            '<span class="badge-cant">' + p.cantidad + ' vendidos</span>' +
+                            '<strong class="producto-ventas">Q' + p.ventas.toFixed(2) + '</strong>' +
+                        '</div>' +
+                    '</div>'
+                ).join("");
+            }
+
+            const tablaPed = document.getElementById("tabla-pedidos");
+            if (data.pedidos.length === 0) {
+                tablaPed.innerHTML = '<p class="vacio">Sin pedidos en este período</p>';
+            } else {
+                tablaPed.innerHTML =
+                    '<table class="tabla-simple">' +
+                        '<thead><tr>' +
+                            '<th>#</th><th>Fecha</th><th>Cliente</th>' +
+                            '<th>Detalle</th><th>Total</th><th>Estado</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' +
+                        data.pedidos.map(p =>
+                            '<tr>' +
+                                '<td>#' + p.id + '</td>' +
+                                '<td>' + p.fecha.substring(5, 16) + '</td>' +
+                                '<td>' + p.cliente + '</td>' +
+                                '<td>' + p.detalle.replace(/\n/g, "<br>") + '</td>' +
+                                '<td><strong>Q' + p.total.toFixed(2) + '</strong></td>' +
+                                '<td><span class="badge-estado2">' + p.estado + '</span></td>' +
+                            '</tr>'
+                        ).join("") +
+                        '</tbody>' +
+                    '</table>';
+            }
+        }
+
+        document.querySelectorAll(".filtro").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".filtro").forEach(b => b.classList.remove("activo"));
+                btn.classList.add("activo");
+                periodoActual = btn.dataset.periodo;
+                cargarReporte();
+            });
+        });
+
+        function exportarExcel() {
+            window.location.href = "/admin/reportes/excel?periodo=" + periodoActual;
+        }
+
+        cargarReporte();
+    </script>
+</body>
+</html>

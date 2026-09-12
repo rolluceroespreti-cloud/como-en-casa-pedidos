@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Como en Casa - Pedidos Online</title>
+
+    <meta name="theme-color" content="#3a1e0f">
+    <meta name="description" content="Comida tradicional a domicilio 🍲">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Como en Casa">
+
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="hero">
+        <div class="hero-contenido">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Como en Casa" class="logo-hero">
+            <p>Comida tradicional, directo a tu puerta</p>
+            <button id="btn-carrito" class="btn-carrito">
+                🛒 Ver pedido <span id="contador-carrito">0</span>
+            </button>
+        </div>
+        <div class="hero-olas">
+            <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+                <path fill="#f7f7f9" d="M0,50 C360,100 1080,0 1440,50 L1440,100 L0,100 Z"></path>
+            </svg>
+        </div>
+    </header>
+
+    <main>
+        <section class="menu-section">
+            <h2>📋 Nuestro Menú</h2>
+            <div class="grid-menu">
+                {% for clave, item in menu.items() %}
+                <div class="platillo" style="--color: {{ item.color|default('#888') }};">
+                    <div class="platillo-emoji">{{ item.emoji|default('🍽️') }}</div>
+                    <div class="platillo-info">
+                        <h3>{{ item.nombre }}</h3>
+                        <p class="desc">{{ item.descripcion }}</p>
+                        <div class="platillo-footer">
+                            <span class="precio">Q{{ "%.2f"|format(item.precio) }}</span>
+                            <button class="btn-agregar"
+                                    data-clave="{{ clave }}"
+                                    data-nombre="{{ item.nombre }}"
+                                    data-precio="{{ item.precio }}"
+                                    data-emoji="{{ item.emoji|default('🍽️') }}">
+                                ➕ Agregar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <aside id="carrito" class="carrito oculto">
+        <div class="carrito-header">
+            <h3>🛒 Tu pedido</h3>
+            <button onclick="cerrarCarrito()">✖</button>
+        </div>
+        <div id="carrito-items" class="carrito-items"></div>
+        <div class="carrito-footer">
+            <div class="total-linea">
+                <span>Total:</span>
+                <strong id="total">Q0.00</strong>
+            </div>
+            <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
+            <input type="text" id="cliente-telefono" placeholder="Tu teléfono (opcional)">
+            <input type="text" id="cliente-direccion" placeholder="Dirección de entrega (opcional)">
+            <button class="btn-confirmar" onclick="confirmarPedido()">✅ Confirmar pedido</button>
+        </div>
+    </aside>
+
+    <div id="toast" class="toast"></div>
+
+    <button id="btn-chat" class="btn-chat-flotante">💬</button>
+    <div id="chat-widget" class="chat-widget oculto">
+        <div class="chat-header">
+            <strong>💬 Asistente virtual</strong>
+            <button onclick="toggleChat()">✖</button>
+        </div>
+        <div id="chat-box" class="chat-box"></div>
+        <form id="chat-form" class="chat-form">
+            <input type="text" id="mensaje" placeholder="Escribe tu pregunta..." autocomplete="off">
+            <button type="submit">➤</button>
+        </form>
+    </div>
+
+    <script>
+        let carrito = {};
+
+        const carritoPanel = document.getElementById("carrito");
+        const carritoItems = document.getElementById("carrito-items");
+        const totalEl = document.getElementById("total");
+        const contador = document.getElementById("contador-carrito");
+
+        function abrirCarrito() { carritoPanel.classList.remove("oculto"); }
+        function cerrarCarrito() { carritoPanel.classList.add("oculto"); }
+
+        document.getElementById("btn-carrito").addEventListener("click", abrirCarrito);
+
+        document.querySelectorAll(".btn-agregar").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                const clave = btn.dataset.clave;
+                const nombre = btn.dataset.nombre;
+                const precio = parseFloat(btn.dataset.precio);
+                const emoji = btn.dataset.emoji || "🍽️";
+
+                if (!carrito[clave]) carrito[clave] = { nombre, precio, cant: 0, emoji };
+                carrito[clave].cant++;
+
+                actualizarCarrito();
+                mostrarToast("✅ " + nombre + " agregado");
+                abrirCarrito();
+            });
+        });
+
+        function sumar(clave) {
+            if (!carrito[clave]) return;
+            carrito[clave].cant++;
+            actualizarCarrito();
+        }
+        function restar(clave) {
+            if (!carrito[clave]) return;
+            carrito[clave].cant--;
+            if (carrito[clave].cant <= 0) delete carrito[clave];
+            actualizarCarrito();
+        }
+        function eliminar(clave) {
+            if (!carrito[clave]) return;
+            delete carrito[clave];
+            actualizarCarrito();
+            mostrarToast("🗑️ Eliminado");
+        }
+        function cambiarCantidad(clave, valor) {
+            if (!carrito[clave]) return;
+            let cant = parseInt(valor);
+            if (isNaN(cant) || cant < 1) cant = 1;
+            if (cant > 99) cant = 99;
+            carrito[clave].cant = cant;
+            actualizarCarrito();
+        }
+
+        function actualizarCarrito() {
+            carritoItems.innerHTML = "";
+            let total = 0, cantidad = 0;
+
+            if (Object.keys(carrito).length === 0) {
+                carritoItems.innerHTML = "<p style='text-align:center;color:#999;padding:1rem 0;'>Tu carrito está vacío 🛒</p>";
+            }
+
+            for (const clave in carrito) {
+                const item = carrito[clave];
+                const sub = item.precio * item.cant;
+                total += sub;
+                cantidad += item.cant;
+
+                const div = document.createElement("div");
+                div.className = "carrito-item";
+                div.innerHTML =
+                    '<div class="carrito-item-info">' +
+                        '<span class="carrito-emoji">' + item.emoji + '</span>' +
+                        '<div>' +
+                            '<strong>' + item.nombre + '</strong><br>' +
+                            '<small>Q' + item.precio.toFixed(2) + ' x ' + item.cant + ' = Q' + sub.toFixed(2) + '</small>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="carrito-item-acciones">' +
+                        '<div class="carrito-controles">' +
+                            '<button onclick="restar(\'' + clave + '\')">−</button>' +
+                            '<input type="number" class="input-cantidad" value="' + item.cant + '" min="1" max="99" onchange="cambiarCantidad(\'' + clave + '\', this.value)">' +
+                            '<button onclick="sumar(\'' + clave + '\')">+</button>' +
+                        '</div>' +
+                        '<div class="carrito-subtotal">Q' + sub.toFixed(2) + '</div>' +
+                        '<button class="btn-eliminar-item" onclick="eliminar(\'' + clave + '\')">🗑️</button>' +
+                    '</div>';
+                carritoItems.appendChild(div);
+            }
+
+            totalEl.textContent = "Q" + total.toFixed(2);
+
+            if (contador.textContent !== String(cantidad)) {
+                contador.textContent = cantidad;
+                contador.classList.remove("bump");
+                void contador.offsetWidth;
+                contador.classList.add("bump");
+            }
+        }
+
+        async function confirmarPedido() {
+            if (Object.keys(carrito).length === 0) {
+                alert("Tu carrito está vacío");
+                return;
+            }
+            const nombre = document.getElementById("cliente-nombre").value.trim();
+            if (!nombre) {
+                alert("Escribe tu nombre");
+                document.getElementById("cliente-nombre").focus();
+                return;
+            }
+
+            const pedido = {};
+            for (const k in carrito) pedido[k] = carrito[k].cant;
+
+            const telefono = document.getElementById("cliente-telefono").value.trim();
+            const direccion = document.getElementById("cliente-direccion").value.trim();
+
+            try {
+                const res = await fetch("/pedido", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pedido, nombre, telefono, direccion })
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    alert("✅ ¡Pedido confirmado!\nPedido #" + data.pedido_id + "\nTotal: Q" + data.total.toFixed(2) + "\n\nGracias " + nombre);
+                    carrito = {};
+                    actualizarCarrito();
+                    cerrarCarrito();
+                    document.getElementById("cliente-nombre").value = "";
+                    document.getElementById("cliente-telefono").value = "";
+                    document.getElementById("cliente-direccion").value = "";
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            } catch (err) {
+                alert("⚠️ No se pudo enviar el pedido.");
+                console.error(err);
+            }
+        }
+
+        let toastTimeout;
+        function mostrarToast(mensaje) {
+            const toast = document.getElementById("toast");
+            toast.textContent = mensaje;
+            toast.classList.add("visible");
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove("visible"), 1800);
+        }
+
+        const chatBox = document.getElementById("chat-box");
+        const chatForm = document.getElementById("chat-form");
+        const inputMsg = document.getElementById("mensaje");
+
+        function toggleChat() {
+            document.getElementById("chat-widget").classList.toggle("oculto");
+        }
+        document.getElementById("btn-chat").addEventListener("click", toggleChat);
+
+        function agregarMensaje(texto, quien) {
+            const div = document.createElement("div");
+            div.className = "msg " + quien;
+            div.innerText = texto;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        agregarMensaje("¡Hola! 👋 Soy el asistente de Como en Casa.\n\nPuedo ayudarte con:\n• menu → Ver platillos\n• horario → Nuestros horarios\n• dirección → Cómo llegar\n• pago → Formas de pago\n• envío → Info de delivery\n• cancelar → Cancelar pedido", "bot");
+
+        chatForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const mensaje = inputMsg.value.trim();
+            if (!mensaje) return;
+            agregarMensaje(mensaje, "user");
+            inputMsg.value = "";
+            try {
+                const res = await fetch("/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mensaje })
+                });
+                const data = await res.json();
+                agregarMensaje(data.respuesta, "bot");
+            } catch {
+                agregarMensaje("⚠️ Error de conexión", "bot");
+            }
+        });
+
+        // ============ SERVICE WORKER (PWA) ============
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('✅ ServiceWorker registrado:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('❌ Error ServiceWorker:', error);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

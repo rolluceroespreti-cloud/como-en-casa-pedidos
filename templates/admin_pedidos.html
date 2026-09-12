@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛎️ Pedidos - Mi Restaurante</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="admin-nav">
+        <a href="/admin/pedidos" class="nav-link activo">🛎️ Pedidos</a>
+        <a href="/admin" class="nav-link">⚙️ Menú</a>
+        <a href="/admin/reportes" class="nav-link">📊 Reportes</a>
+        <a href="/" target="_blank" class="nav-link">👁️ Ver cliente</a>
+        <a href="/admin/logout" class="nav-link salir">🚪 Salir</a>
+    </nav>
+
+    <main style="max-width: 1400px; padding: 2rem 1.5rem; margin: auto;">
+        <h1 style="color: #1d3557; margin-bottom: 1.5rem;">🛎️ Panel de Pedidos</h1>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="--stat-color: #e63946;">
+                <div class="stat-icon">🔔</div>
+                <div class="stat-info">
+                    <span class="stat-label">Pendientes</span>
+                    <strong class="stat-value" id="stat-pendientes">0</strong>
+                </div>
+            </div>
+            <div class="stat-card" style="--stat-color: #f4a261;">
+                <div class="stat-icon">📦</div>
+                <div class="stat-info">
+                    <span class="stat-label">Pedidos hoy</span>
+                    <strong class="stat-value" id="stat-cantidad">0</strong>
+                </div>
+            </div>
+            <div class="stat-card" style="--stat-color: #2a9d8f;">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                    <span class="stat-label">Ventas hoy</span>
+                    <strong class="stat-value" id="stat-total">Q0.00</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="filtros">
+            <button class="filtro activo" data-filtro="todos">📋 Todos</button>
+            <button class="filtro" data-filtro="pendiente">🔔 Pendientes</button>
+            <button class="filtro" data-filtro="preparando">👨‍🍳 Preparando</button>
+            <button class="filtro" data-filtro="listo">✅ Listos</button>
+            <button class="filtro" data-filtro="entregado">📦 Entregados</button>
+        </div>
+
+        <div id="lista-pedidos" class="lista-pedidos">
+            <p class="vacio">Esperando pedidos... 🍽️</p>
+        </div>
+    </main>
+
+    <script>
+        let ultimoPedidoConocido = 0;
+        let filtroActual = "todos";
+
+        function formatearHora(fecha) {
+            return fecha.split(" ")[1].substring(0, 5);
+        }
+
+        function colorEstado(estado) {
+            const colores = {
+                "pendiente": "#e63946",
+                "preparando": "#f4a261",
+                "listo": "#2a9d8f",
+                "entregado": "#6c757d",
+            };
+            return colores[estado] || "#888";
+        }
+
+        function iconoEstado(estado) {
+            const iconos = {
+                "pendiente": "🔔",
+                "preparando": "👨‍🍳",
+                "listo": "✅",
+                "entregado": "📦",
+            };
+            return iconos[estado] || "❓";
+        }
+
+        function renderPedido(p) {
+            let botones = "";
+            if (p.estado === "pendiente") {
+                botones = `
+                    <button class="btn-accion btn-preparar" onclick="cambiarEstado(${p.id}, 'preparando')">👨‍🍳 Preparar</button>
+                    <button class="btn-accion btn-listo" onclick="cambiarEstado(${p.id}, 'listo')">✅ Listo</button>
+                `;
+            } else if (p.estado === "preparando") {
+                botones = '<button class="btn-accion btn-listo" onclick="cambiarEstado(' + p.id + ', \'listo\')">✅ Listo</button>';
+            } else if (p.estado === "listo") {
+                botones = '<button class="btn-accion btn-entregar" onclick="cambiarEstado(' + p.id + ', \'entregado\')">📦 Entregado</button>';
+            }
+
+            return `
+                <div class="pedido-card" style="border-left: 6px solid ${colorEstado(p.estado)};">
+                    <div class="pedido-header">
+                        <div>
+                            <span class="pedido-id">#${p.id}</span>
+                            <span class="pedido-hora">${formatearHora(p.fecha)}</span>
+                        </div>
+                        <span class="pedido-estado" style="background: ${colorEstado(p.estado)};">
+                            ${iconoEstado(p.estado)} ${p.estado}
+                        </span>
+                    </div>
+                    <div class="pedido-cliente">
+                        <strong>👤 ${p.cliente}</strong>
+                        ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
+                        ${p.direccion ? `<span>📍 ${p.direccion}</span>` : ""}
+                    </div>
+                    <pre class="pedido-detalle">${p.detalle}</pre>
+                    <div class="pedido-total">Total: <strong>Q${p.total.toFixed(2)}</strong></div>
+                    <div class="pedido-acciones">
+                        ${botones}
+                        <button class="btn-accion btn-imprimir" onclick='imprimirPedido(${JSON.stringify(p)})' title="Imprimir recibo">🖨️</button>
+                        <button class="btn-accion btn-eliminar" onclick="eliminar(${p.id})">🗑️</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function cargarPedidos() {
+            try {
+                const res = await fetch("/admin/pedidos/lista");
+                const data = await res.json();
+                if (!data.ok) {
+                    document.getElementById("lista-pedidos").innerHTML =
+                        '<p class="vacio">⚠️ Sesión expirada. <a href="/admin/login">Volver a iniciar sesión</a></p>';
+                    return;
+                }
+
+                document.getElementById("stat-pendientes").textContent = data.pendientes;
+                document.getElementById("stat-cantidad").textContent = data.cantidad_hoy;
+                document.getElementById("stat-total").textContent = "Q" + data.total_hoy.toFixed(2);
+
+                if (data.pedidos.length > 0) {
+                    const ultimoId = data.pedidos[0].id;
+                    if (ultimoPedidoConocido !== 0 && ultimoId > ultimoPedidoConocido) {
+                        document.title = "🔔 ¡NUEVO PEDIDO!";
+                    }
+                    ultimoPedidoConocido = ultimoId;
+                }
+
+                let pedidos = data.pedidos;
+                if (filtroActual !== "todos") {
+                    pedidos = pedidos.filter(p => p.estado === filtroActual);
+                }
+
+                const contenedor = document.getElementById("lista-pedidos");
+                if (pedidos.length === 0) {
+                    contenedor.innerHTML = '<p class="vacio">No hay pedidos ' +
+                        (filtroActual !== "todos" ? 'en "' + filtroActual + '"' : "") + ' 🍽️</p>';
+                } else {
+                    contenedor.innerHTML = pedidos.map(renderPedido).join("");
+                }
+            } catch (err) {
+                console.error("Error:", err);
+            }
+        }
+
+        async function cambiarEstado(id, estado) {
+            await fetch("/admin/pedidos/estado", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id, estado}),
+            });
+            cargarPedidos();
+        }
+
+        async function eliminar(id) {
+            if (!confirm("¿Eliminar este pedido?")) return;
+            await fetch("/admin/pedidos/eliminar", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id}),
+            });
+            cargarPedidos();
+        }
+
+        // ---------- IMPRIMIR RECIBO ----------
+        function imprimirPedido(p) {
+            const ventana = window.open("", "_blank", "width=400,height=650");
+
+            const lineasHTML = p.detalle.split("\n").map(l => `<div class="item">${l}</div>`).join("");
+
+            ventana.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Recibo #${p.id}</title>
+                    <style>
+                        * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
+                        body { padding: 15px; max-width: 300px; margin: auto; color: #000; }
+                        .header { text-align: center; margin-bottom: 15px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
+                        .header h1 { font-size: 18px; margin-bottom: 3px; letter-spacing: 1px; }
+                        .header p { font-size: 11px; }
+                        .info { font-size: 12px; margin-bottom: 10px; line-height: 1.5; }
+                        .info div { margin-bottom: 2px; }
+                        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+                        .items { font-size: 12px; line-height: 1.6; }
+                        .item { margin-bottom: 4px; }
+                        .total { font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px; border-top: 2px dashed #000; padding-top: 10px; }
+                        .footer { text-align: center; margin-top: 20px; font-size: 11px; border-top: 1px dashed #000; padding-top: 10px; line-height: 1.5; }
+                        @media print {
+                            body { padding: 5px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>MI RESTAURANTE</h1>
+                        <p>Recibo de pedido</p>
+                    </div>
+
+                    <div class="info">
+                        <div><strong>Pedido #:</strong> ${p.id}</div>
+                        <div><strong>Fecha:</strong> ${p.fecha}</div>
+                        <div><strong>Cliente:</strong> ${p.cliente}</div>
+                        ${p.telefono ? `<div><strong>Teléfono:</strong> ${p.telefono}</div>` : ""}
+                        ${p.direccion ? `<div><strong>Dirección:</strong> ${p.direccion}</div>` : ""}
+                        <div><strong>Estado:</strong> ${p.estado.toUpperCase()}</div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="items">
+                        ${lineasHTML}
+                    </div>
+
+                    <div class="total">
+                        TOTAL: Q${p.total.toFixed(2)}
+                    </div>
+
+                    <div class="footer">
+                        ¡Gracias por su compra!<br>
+                        Vuelva pronto
+                    </div>
+
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            setTimeout(() => window.close(), 800);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            ventana.document.close();
+        }
+
+        document.querySelectorAll(".filtro").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".filtro").forEach(b => b.classList.remove("activo"));
+                btn.classList.add("activo");
+                filtroActual = btn.dataset.filtro;
+                cargarPedidos();
+            });
+        });
+
+        window.addEventListener("focus", () => {
+            document.title = "🛎️ Pedidos - Mi Restaurante";
+        });
+
+        cargarPedidos();
+        setInterval(cargarPedidos, 5000);
+    </script>
+</body>
+</html>
