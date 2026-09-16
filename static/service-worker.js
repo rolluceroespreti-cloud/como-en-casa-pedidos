@@ -1,22 +1,28 @@
-const CACHE_NAME = 'restaurante-v1';
-const assetsToCache = [
+const CACHE_NAME = 'como-en-casa-v1';
+const urlsToCache = [
   '/',
   '/static/style.css',
-  '/static/manifest.json'
+  '/static/manifest.json',
+  '/static/logo.png',
+  '/static/icon-192.png'
 ];
 
-// 1. Instalación: Guarda los archivos en caché
 self.addEventListener('install', (event) => {
+  console.log('✅ Service Worker instalando...');
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(assetsToCache);
+      return Promise.all(
+        urlsToCache.map(url =>
+          cache.add(url).catch(err => console.log('No se pudo cachear:', url))
+        )
+      );
     })
   );
-  self.skipWaiting();
 });
 
-// 2. Activación: Limpia cachés viejos
 self.addEventListener('activate', (event) => {
+  console.log('✅ Service Worker activo');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -30,11 +36,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Fetch: Intercepta peticiones y sirve desde caché si existe
 self.addEventListener('fetch', (event) => {
+  // Solo maneja GET (no POST)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return response || fetch(event.request).catch(() => {
+        // Si falla la red y es HTML, devuelve la home
+        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
+          return caches.match('/');
+        }
+      });
     })
   );
 });

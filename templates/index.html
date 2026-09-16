@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Como en Casa - Pedidos Online</title>
 
     <meta name="theme-color" content="#3a1e0f">
@@ -10,6 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Como en Casa">
+    <meta name="mobile-web-app-capable" content="yes">
 
     <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
@@ -39,7 +40,13 @@
             <div class="grid-menu">
                 {% for clave, item in menu.items() %}
                 <div class="platillo" style="--color: {{ item.color|default('#888') }};">
-                    <div class="platillo-emoji">{{ item.emoji|default('🍽️') }}</div>
+                    {% if item.imagen %}
+                        <div class="platillo-imagen">
+                            <img src="{{ item.imagen }}" alt="{{ item.nombre }}">
+                        </div>
+                    {% else %}
+                        <div class="platillo-emoji">{{ item.emoji|default('🍽️') }}</div>
+                    {% endif %}
                     <div class="platillo-info">
                         <h3>{{ item.nombre }}</h3>
                         <p class="desc">{{ item.descripcion }}</p>
@@ -287,7 +294,7 @@
         // ============ SERVICE WORKER (PWA) ============
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
                 .then(registration => {
                     console.log('✅ ServiceWorker registrado:', registration.scope);
                 })

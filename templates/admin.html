@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚙️ Menú - Mi Restaurante</title>
+    <title>⚙️ Menú - Como en Casa</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -16,7 +16,7 @@
     </nav>
 
     <main style="max-width: 1400px; padding: 2rem 1.5rem; margin: auto;">
-        <h1 style="color: #1d3557; margin-bottom: 1.5rem;">⚙️ Gestión del Menú</h1>
+        <h1 style="color: #3a1e0f; margin-bottom: 1.5rem;">⚙️ Gestión del Menú</h1>
 
         <div class="card-form">
             <h2>➕ Agregar nuevo platillo</h2>
@@ -39,22 +39,35 @@
                 </div>
                 <div class="campo">
                     <label>Color</label>
-                    <input type="color" id="nuevo-color" value="#e63946">
+                    <input type="color" id="nuevo-color" value="#e8a547">
                 </div>
                 <div class="campo" style="grid-column: 1 / -1;">
                     <label>Descripción</label>
                     <input type="text" id="nueva-desc" placeholder="Ej: Con mostaza y ketchup">
                 </div>
+
+                <!-- 📸 NUEVO: Campo de imagen -->
+                <div class="campo" style="grid-column: 1 / -1;">
+                    <label>📸 Imagen del platillo (opcional)</label>
+                    <input type="file" id="nuevo-archivo" accept="image/*">
+                    <input type="hidden" id="nuevo-imagen-url" value="">
+                    <div id="preview-imagen" style="margin-top: .5rem;"></div>
+                </div>
+
                 <button type="submit" class="btn-primario" style="grid-column: 1 / -1;">➕ Agregar platillo</button>
             </form>
         </div>
 
-        <h2 style="color: #1d3557; margin: 2rem 0 1rem;">📋 Platillos actuales</h2>
+        <h2 style="color: #3a1e0f; margin: 2rem 0 1rem;">📋 Platillos actuales</h2>
         <div id="grid-platillos" class="grid-admin">
             {% for clave, item in menu.items() %}
             <div class="admin-platillo" data-clave="{{ clave }}" style="--color: {{ item.color|default('#888') }};">
                 <div class="admin-platillo-header">
-                    <input type="text" class="in-emoji" value="{{ item.emoji|default('🍽️') }}" maxlength="3">
+                    {% if item.imagen %}
+                        <img src="{{ item.imagen }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 10px;">
+                    {% else %}
+                        <input type="text" class="in-emoji" value="{{ item.emoji|default('🍽️') }}" maxlength="3">
+                    {% endif %}
                     <span class="badge-estado {{ 'visible' if item.activo else 'oculto' }}">
                         {{ '👁️ Visible' if item.activo else '🚫 Oculto' }}
                     </span>
@@ -87,6 +100,35 @@
             return res.json();
         }
 
+        // 📸 Subir imagen
+        document.getElementById("nuevo-archivo").addEventListener("change", async function(e) {
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+
+            const preview = document.getElementById("preview-imagen");
+            preview.innerHTML = "<p style='color:#888'>⏳ Subiendo imagen...</p>";
+
+            const formData = new FormData();
+            formData.append("imagen", archivo);
+
+            try {
+                const res = await fetch("/admin/subir_imagen", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    document.getElementById("nuevo-imagen-url").value = data.url;
+                    preview.innerHTML = `<img src="${data.url}" style="max-width: 150px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.15);">`;
+                } else {
+                    preview.innerHTML = `<p style='color: #e63946'>❌ ${data.error}</p>`;
+                }
+            } catch (err) {
+                preview.innerHTML = "<p style='color: #e63946'>❌ Error de conexión</p>";
+            }
+        });
+
         document.getElementById("form-agregar").addEventListener("submit", async (e) => {
             e.preventDefault();
             const data = {
@@ -97,6 +139,7 @@
                 descripcion: document.getElementById("nueva-desc").value,
                 emoji: document.getElementById("nuevo-emoji").value,
                 color: document.getElementById("nuevo-color").value,
+                imagen: document.getElementById("nuevo-imagen-url").value,
             };
             const r = await llamarAPI(data);
             if (r.ok) location.reload();
@@ -111,7 +154,7 @@
                 nombre: card.querySelector(".in-nombre").value,
                 precio: card.querySelector(".in-precio").value,
                 descripcion: card.querySelector(".in-desc").value,
-                emoji: card.querySelector(".in-emoji").value,
+                emoji: card.querySelector(".in-emoji") ? card.querySelector(".in-emoji").value : "🍽️",
             };
             const r = await llamarAPI(data);
             if (r.ok) {

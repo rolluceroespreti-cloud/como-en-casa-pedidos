@@ -6,3 +6,4 @@ pedidos.json
 .venv/
 venv/
 .vscode/
+static/uploads/
