@@ -4,10 +4,8 @@ import uuid
 import os
 import io
 import csv
-import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from werkzeug.utils import secure_filename
 
 from menu import cargar_menu, guardar_menu, menu_activo
 from chatbot import responder
@@ -23,17 +21,17 @@ app.secret_key = "cambia_esta_clave_secreta_123"
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# Configuración de subida de imágenes
-UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB máximo
+# 🔥 Inicializar base de datos
+from database import init_db
+from menu import inicializar_menu_si_vacio
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
-
-
-def archivo_permitido(nombre):
-    return '.' in nombre and nombre.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+try:
+    init_db()
+    inicializar_menu_si_vacio()
+    print("✅ Base de datos lista")
+except Exception as e:
+    print(f"⚠️ Error con BD: {e}")
+    print("   La app funcionará con archivos JSON locales")
 
 
 # ------------------- UTILIDADES -------------------
@@ -162,7 +160,6 @@ def admin_guardar():
             "descripcion": data.get("descripcion", ""),
             "emoji": data.get("emoji", "🍽️"),
             "color": data.get("color", "#888"),
-            "imagen": data.get("imagen", ""),
         }
 
     elif data["accion"] == "editar":
@@ -174,8 +171,6 @@ def admin_guardar():
         menu[clave]["descripcion"] = data.get("descripcion", "")
         if "emoji" in data:
             menu[clave]["emoji"] = data["emoji"]
-        if "imagen" in data:
-            menu[clave]["imagen"] = data["imagen"]
 
     elif data["accion"] == "toggle":
         clave = data["clave"]
@@ -191,30 +186,6 @@ def admin_guardar():
 
     guardar_menu(menu)
     return jsonify({"ok": True})
-
-
-@app.route("/admin/subir_imagen", methods=["POST"])
-def admin_subir_imagen():
-    if not requiere_admin():
-        return jsonify({"ok": False, "error": "No autorizado"}), 401
-
-    if "imagen" not in request.files:
-        return jsonify({"ok": False, "error": "No se envió archivo"}), 400
-
-    archivo = request.files["imagen"]
-    if archivo.filename == "":
-        return jsonify({"ok": False, "error": "Archivo vacío"}), 400
-
-    if not archivo_permitido(archivo.filename):
-        return jsonify({"ok": False, "error": "Formato no permitido (usa PNG, JPG, WEBP o GIF)"}), 400
-
-    nombre_seguro = secure_filename(archivo.filename)
-    nombre_final = f"{int(time.time())}_{nombre_seguro}"
-    ruta = os.path.join(app.config['UPLOAD_FOLDER'], nombre_final)
-    archivo.save(ruta)
-
-    url = f"/static/uploads/{nombre_final}"
-    return jsonify({"ok": True, "url": url, "nombre": nombre_final})
 
 
 # ------------------- PEDIDOS -------------------
@@ -397,5 +368,4 @@ def admin_reportes_excel():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(debug=True, host="0.0.0.0", port=5000)
