@@ -96,7 +96,7 @@ def inicializar_menu_si_vacio():
     """Si la BD está vacía, carga el menú desde menu.json."""
     menu = cargar_menu()
     if menu:
-        return
+        return  # Ya hay datos
 
     archivo = os.path.join(os.path.dirname(__file__), "menu.json")
     if os.path.exists(archivo):
