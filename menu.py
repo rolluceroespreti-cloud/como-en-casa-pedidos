@@ -9,7 +9,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def cargar_menu():
     """Carga todo el menú desde la base de datos."""
     if not DATABASE_URL:
-        # Fallback: usar JSON si no hay BD configurada
         archivo = os.path.join(os.path.dirname(__file__), "menu.json")
         if not os.path.exists(archivo):
             return {}
@@ -33,6 +32,7 @@ def cargar_menu():
             "emoji": fila["emoji"] or "🍽️",
             "color": fila["color"] or "#888",
             "imagen": fila["imagen"] or "",
+            "opciones": fila["opciones"] or "",
         }
     return menu
 
@@ -48,12 +48,11 @@ def guardar_menu(menu):
     conn = get_connection()
     cur = conn.cursor()
 
-    # Reemplaza todos los platillos
     cur.execute("DELETE FROM menu")
     for clave, item in menu.items():
         cur.execute("""
-            INSERT INTO menu (clave, nombre, precio, activo, descripcion, emoji, color, imagen)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO menu (clave, nombre, precio, activo, descripcion, emoji, color, imagen, opciones)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             clave,
             item["nombre"],
@@ -63,6 +62,7 @@ def guardar_menu(menu):
             item.get("emoji", "🍽️"),
             item.get("color", "#888"),
             item.get("imagen", ""),
+            item.get("opciones", ""),
         ))
 
     conn.commit()
@@ -96,7 +96,7 @@ def inicializar_menu_si_vacio():
     """Si la BD está vacía, carga el menú desde menu.json."""
     menu = cargar_menu()
     if menu:
-        return  # Ya hay datos
+        return
 
     archivo = os.path.join(os.path.dirname(__file__), "menu.json")
     if os.path.exists(archivo):
