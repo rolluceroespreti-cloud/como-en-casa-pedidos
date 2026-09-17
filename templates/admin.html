@@ -46,15 +46,7 @@
                     <input type="text" id="nueva-desc" placeholder="Ej: Con mostaza y ketchup">
                 </div>
 
-                <div class="campo" style="grid-column: 1 / -1;">
-                    <label>Opciones del platillo (una por línea, formato: Nombre|Precio)</label>
-                    <textarea id="nuevas-opciones" rows="4" placeholder="Con lechuga|0
-Sin tomate|0
-Extra tocino|8
-Doble carne|15
-Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;font-family:inherit;resize:vertical;"></textarea>
-                </div>
-
+                <!-- 📸 NUEVO: Campo de imagen -->
                 <div class="campo" style="grid-column: 1 / -1;">
                     <label>📸 Imagen del platillo (opcional)</label>
                     <input type="file" id="nuevo-archivo" accept="image/*">
@@ -70,38 +62,22 @@ Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;fon
         <div id="grid-platillos" class="grid-admin">
             {% for clave, item in menu.items() %}
             <div class="admin-platillo" data-clave="{{ clave }}" style="--color: {{ item.color|default('#888') }};">
-
-                <div class="admin-platillo-imagen">
-                    {% if item.imagen %}
-                        <img src="{{ item.imagen }}" alt="{{ item.nombre }}" id="img-actual-{{ clave }}">
-                    {% else %}
-                        <div class="sin-imagen" id="img-actual-{{ clave }}">{{ item.emoji|default('🍽️') }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="admin-imagen-acciones">
-                    <input type="file" class="input-imagen" data-clave="{{ clave }}" accept="image/*" style="display:none;" id="file-{{ clave }}">
-                    <label for="file-{{ clave }}" class="btn-cambiar-img">📸 Cambiar imagen</label>
-                    <input type="hidden" class="in-imagen-url" value="{{ item.imagen|default('') }}">
-                </div>
-
                 <div class="admin-platillo-header">
-                    <input type="text" class="in-emoji" value="{{ item.emoji|default('🍽️') }}" maxlength="3">
+                    {% if item.imagen %}
+                        <img src="{{ item.imagen }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 10px;">
+                    {% else %}
+                        <input type="text" class="in-emoji" value="{{ item.emoji|default('🍽️') }}" maxlength="3">
+                    {% endif %}
                     <span class="badge-estado {{ 'visible' if item.activo else 'oculto' }}">
                         {{ '👁️ Visible' if item.activo else '🚫 Oculto' }}
                     </span>
                 </div>
-
                 <input type="text" class="in-nombre" value="{{ item.nombre }}" placeholder="Nombre">
                 <input type="text" class="in-desc" value="{{ item.descripcion|default('') }}" placeholder="Descripción">
-
-                <textarea class="in-opciones" rows="3" placeholder="Opciones: Con lechuga|0, Extra tocino|8" style="width:100%;padding:.5rem;border:1px solid #eee;border-radius:8px;font-size:.85rem;font-family:inherit;resize:vertical;">{{ item.opciones|default('') }}</textarea>
-
                 <div class="admin-platillo-precio">
                     <span>Q</span>
                     <input type="number" class="in-precio" value="{{ item.precio }}" step="0.01">
                 </div>
-
                 <div class="admin-platillo-acciones">
                     <button class="btn-guardar" onclick="guardar('{{ clave }}')">💾 Guardar</button>
                     <button class="btn-toggle" onclick="toggle('{{ clave }}')">
@@ -124,6 +100,7 @@ Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;fon
             return res.json();
         }
 
+        // 📸 Subir imagen
         document.getElementById("nuevo-archivo").addEventListener("change", async function(e) {
             const archivo = e.target.files[0];
             if (!archivo) return;
@@ -143,49 +120,13 @@ Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;fon
 
                 if (data.ok) {
                     document.getElementById("nuevo-imagen-url").value = data.url;
-                    preview.innerHTML = `<img src="${data.url}" style="max-width: 150px; border-radius: 10px;">`;
+                    preview.innerHTML = `<img src="${data.url}" style="max-width: 150px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.15);">`;
                 } else {
                     preview.innerHTML = `<p style='color: #e63946'>❌ ${data.error}</p>`;
                 }
             } catch (err) {
                 preview.innerHTML = "<p style='color: #e63946'>❌ Error de conexión</p>";
             }
-        });
-
-        document.querySelectorAll(".input-imagen").forEach(input => {
-            input.addEventListener("change", async function(e) {
-                const clave = e.target.dataset.clave;
-                const archivo = e.target.files[0];
-                if (!archivo) return;
-
-                const imgActual = document.getElementById("img-actual-" + clave);
-                imgActual.style.opacity = "0.5";
-
-                const formData = new FormData();
-                formData.append("imagen", archivo);
-
-                try {
-                    const res = await fetch("/admin/subir_imagen", {
-                        method: "POST",
-                        body: formData
-                    });
-                    const data = await res.json();
-
-                    if (data.ok) {
-                        imgActual.outerHTML = `<img src="${data.url}" alt="" id="img-actual-${clave}" style="opacity:1;">`;
-                        const card = document.querySelector(`.admin-platillo[data-clave="${clave}"]`);
-                        card.querySelector(".in-imagen-url").value = data.url;
-                        await guardar(clave);
-                        alert("✅ Imagen actualizada");
-                    } else {
-                        alert("❌ " + data.error);
-                        imgActual.style.opacity = "1";
-                    }
-                } catch (err) {
-                    alert("❌ Error de conexión");
-                    imgActual.style.opacity = "1";
-                }
-            });
         });
 
         document.getElementById("form-agregar").addEventListener("submit", async (e) => {
@@ -199,14 +140,13 @@ Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;fon
                 emoji: document.getElementById("nuevo-emoji").value,
                 color: document.getElementById("nuevo-color").value,
                 imagen: document.getElementById("nuevo-imagen-url").value,
-                opciones: document.getElementById("nuevas-opciones").value,
             };
             const r = await llamarAPI(data);
             if (r.ok) location.reload();
             else alert("❌ " + r.error);
         });
 
-              async function guardar(clave) {
+        async function guardar(clave) {
             const card = document.querySelector('.admin-platillo[data-clave="' + clave + '"]');
             const data = {
                 accion: "editar",
@@ -215,8 +155,6 @@ Queso extra|5" style="padding:.6rem;border:1px solid #ddd;border-radius:10px;fon
                 precio: card.querySelector(".in-precio").value,
                 descripcion: card.querySelector(".in-desc").value,
                 emoji: card.querySelector(".in-emoji") ? card.querySelector(".in-emoji").value : "🍽️",
-                imagen: card.querySelector(".in-imagen-url") ? card.querySelector(".in-imagen-url").value : "",
-                opciones: card.querySelector(".in-opciones") ? card.querySelector(".in-opciones").value : "",
             };
             const r = await llamarAPI(data);
             if (r.ok) {

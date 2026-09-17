@@ -4,6 +4,7 @@ import uuid
 import os
 import io
 import csv
+import re
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -35,6 +36,48 @@ def archivo_permitido(nombre):
     return '.' in nombre and nombre.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def parsear_opciones(opciones_texto):
+    """
+    Convierte el texto de opciones en lista de dicts.
+    Acepta: "Lechuga|10", "Lechuga Q10", "Lechuga - 10", "Lechuga"
+    """
+    resultado = []
+    if not opciones_texto:
+        return resultado
+
+    for linea in opciones_texto.split("\n"):
+        linea = linea.strip()
+        if not linea:
+            continue
+
+        partes = re.split(r'[|]|\s+Q\s*|\s+-\s+', linea, maxsplit=1, flags=re.IGNORECASE)
+        nombre = partes[0].strip()
+        precio = 0
+
+        if len(partes) > 1:
+            precio_limpio = re.sub(r'[^0-9.]', '', partes[1])
+            try:
+                precio = float(precio_limpio) if precio_limpio else 0
+            except:
+                precio = 0
+
+        resultado.append({"nombre": nombre, "precio": precio})
+
+    return resultado
+
+
+def calcular_extra_opciones(clave, opciones_elegidas, menu):
+    if clave not in menu:
+        return 0
+    opciones_data = menu[clave].get("opciones", "")
+    opciones_lista = parsear_opciones(opciones_data)
+    precio_extra = 0
+    for opcion in opciones_lista:
+        if opcion["nombre"] in opciones_elegidas:
+            precio_extra += opcion["precio"]
+    return precio_extra
+
+
 # 🔥 Inicializar base de datos
 from database import init_db
 from menu import inicializar_menu_si_vacio
@@ -50,15 +93,10 @@ except Exception as e:
 
 # ------------------- UTILIDADES -------------------
 def calcular_total(pedido, detalles_opciones=None):
-    """
-    Calcula el total del pedido sumando los extras de las opciones.
-    pedido = {"clave|opciones": cantidad, ...}
-    """
     menu = menu_activo()
     total = 0
 
     for combo_key, cant in pedido.items():
-        # Separar clave de opciones
         partes = combo_key.split("|", 1)
         clave = partes[0]
         opciones_str = partes[1] if len(partes) > 1 else ""
@@ -69,25 +107,15 @@ def calcular_total(pedido, detalles_opciones=None):
         precio_base = menu[clave]["precio"]
         precio_extra = 0
 
-        # Calcular extras
         if opciones_str:
             opciones_elegidas = [o.strip() for o in opciones_str.split(",")]
-            opciones_data = menu[clave].get("opciones", "")
-            for linea in opciones_data.split("\n"):
-                if "|" in linea:
-                    nombre_op, precio_op = linea.split("|", 1)
-                    if nombre_op.strip() in opciones_elegidas:
-                        try:
-                            precio_extra += float(precio_op.strip())
-                        except:
-                            pass
+            precio_extra = calcular_extra_opciones(clave, opciones_elegidas, menu)
 
         total += (precio_base + precio_extra) * cant
 
     return total
 
 
-# ------------------- SERVICE WORKER (PWA) -------------------
 @app.route('/service-worker.js')
 def service_worker():
     return send_from_directory(app.static_folder, 'service-worker.js')
@@ -147,18 +175,9 @@ def pedido():
             precio_base = menu[clave_real]["precio"]
             precio_extra = 0
 
-            # Calcular extras
             if opciones_str:
                 opciones_elegidas = [o.strip() for o in opciones_str.split(",")]
-                opciones_data = menu[clave_real].get("opciones", "")
-                for linea in opciones_data.split("\n"):
-                    if "|" in linea:
-                        nombre_op, precio_op = linea.split("|", 1)
-                        if nombre_op.strip() in opciones_elegidas:
-                            try:
-                                precio_extra += float(precio_op.strip())
-                            except:
-                                pass
+                precio_extra = calcular_extra_opciones(clave_real, opciones_elegidas, menu)
 
             subtotal = (precio_base + precio_extra) * cant
             total_calculado += subtotal
@@ -225,6 +244,9 @@ def admin_guardar():
             return jsonify({"ok": False, "error": "Clave vacía"}), 400
         if clave in menu:
             return jsonify({"ok": False, "error": "Ya existe esa clave"}), 400
+
+        max_orden = max([item.get("orden", 0) for item in menu.values()], default=0)
+
         menu[clave] = {
             "nombre": data["nombre"],
             "precio": float(data["precio"]),
@@ -234,6 +256,7 @@ def admin_guardar():
             "color": data.get("color", "#888"),
             "imagen": data.get("imagen", ""),
             "opciones": data.get("opciones", ""),
+            "orden": max_orden + 1,
         }
 
     elif data["accion"] == "editar":
@@ -261,6 +284,25 @@ def admin_guardar():
 
     else:
         return jsonify({"ok": False, "error": "Acción inválida"}), 400
+
+    guardar_menu(menu)
+    return jsonify({"ok": True})
+
+
+@app.route("/admin/reordenar", methods=["POST"])
+def admin_reordenar():
+    """Reordena los platillos."""
+    if not requiere_admin():
+        return jsonify({"ok": False, "error": "No autorizado"}), 401
+
+    data = request.get_json()
+    nuevo_orden = data.get("orden", [])
+
+    menu = cargar_menu()
+
+    for i, clave in enumerate(nuevo_orden):
+        if clave in menu:
+            menu[clave]["orden"] = i + 1
 
     guardar_menu(menu)
     return jsonify({"ok": True})

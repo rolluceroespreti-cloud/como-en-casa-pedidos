@@ -10,14 +10,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 def get_connection():
-    """Devuelve una conexión a la base de datos PostgreSQL."""
     if not DATABASE_URL:
         raise Exception("Falta DATABASE_URL en las variables de entorno")
     return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 
 def init_db():
-    """Crea las tablas si no existen."""
     if not DATABASE_URL:
         print("⚠️ DATABASE_URL no configurada. Saltando inicialización de BD.")
         return
@@ -25,7 +23,6 @@ def init_db():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Tabla de menú
     cur.execute("""
         CREATE TABLE IF NOT EXISTS menu (
             clave VARCHAR(100) PRIMARY KEY,
@@ -36,16 +33,14 @@ def init_db():
             emoji VARCHAR(10),
             color VARCHAR(20),
             imagen TEXT,
-            opciones TEXT
+            opciones TEXT,
+            orden INTEGER DEFAULT 999
         )
     """)
 
-    # Si la tabla ya existía, agregar la columna opciones sin perder datos
-    cur.execute("""
-        ALTER TABLE menu ADD COLUMN IF NOT EXISTS opciones TEXT
-    """)
+    cur.execute("ALTER TABLE menu ADD COLUMN IF NOT EXISTS opciones TEXT")
+    cur.execute("ALTER TABLE menu ADD COLUMN IF NOT EXISTS orden INTEGER DEFAULT 999")
 
-    # Tabla de pedidos
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pedidos (
             id SERIAL PRIMARY KEY,

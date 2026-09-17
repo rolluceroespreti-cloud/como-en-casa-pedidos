@@ -16,12 +16,12 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
     <link rel="apple-touch-icon" href="/static/icon-192.png">
 
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <header class="hero">
         <div class="hero-contenido">
-            <img src="/static/logo.png" alt="Como en Casa" class="logo-hero" onerror="this.style.display='none'">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Como en Casa" class="logo-hero">
             <p>Comida tradicional, directo a tu puerta</p>
             <button id="btn-carrito" class="btn-carrito">
                 🛒 Ver pedido <span id="contador-carrito">0</span>
@@ -85,22 +85,6 @@
         </div>
     </aside>
 
-    <div id="modal-opciones" class="modal oculto">
-        <div class="modal-contenido">
-            <div class="modal-header">
-                <h3 id="modal-titulo">Personaliza tu platillo</h3>
-                <button onclick="cerrarModal()">✖</button>
-            </div>
-            <div id="modal-cuerpo" class="modal-cuerpo"></div>
-            <div class="modal-footer">
-                <div class="modal-precio">
-                    Total: <strong id="modal-precio-total">Q0.00</strong>
-                </div>
-                <button class="btn-confirmar-modal" onclick="confirmarModal()">✅ Agregar al carrito</button>
-            </div>
-        </div>
-    </div>
-
     <div id="toast" class="toast"></div>
 
     <button id="btn-chat" class="btn-chat-flotante">💬</button>
@@ -117,20 +101,7 @@
     </div>
 
     <script>
-        // ==================== DATOS DEL MENÚ ====================
-        const menuData = {};
-        {% for clave, item in menu.items() %}
-        menuData["{{ clave }}"] = {
-            nombre: {{ item.nombre|tojson }},
-            precio: {{ item.precio }},
-            emoji: {{ (item.emoji|default('🍽️'))|tojson }},
-            opciones: {{ (item.opciones|default(''))|tojson }}
-        };
-        {% endfor %}
-
-        // ==================== CARRITO ====================
         let carrito = {};
-        let platilloActual = null;
 
         const carritoPanel = document.getElementById("carrito");
         const carritoItems = document.getElementById("carrito-items");
@@ -145,141 +116,42 @@
         document.querySelectorAll(".btn-agregar").forEach(function (btn) {
             btn.addEventListener("click", function () {
                 const clave = btn.dataset.clave;
-                const data = menuData[clave];
+                const nombre = btn.dataset.nombre;
+                const precio = parseFloat(btn.dataset.precio);
+                const emoji = btn.dataset.emoji || "🍽️";
 
-                if (!data) {
-                    alert("Error: no se encontró el platillo");
-                    return;
-                }
+                if (!carrito[clave]) carrito[clave] = { nombre, precio, cant: 0, emoji };
+                carrito[clave].cant++;
 
-                if (data.opciones && data.opciones.trim()) {
-                    abrirModal(clave, data);
-                } else {
-                    agregarDirecto(clave, data);
-                }
+                actualizarCarrito();
+                mostrarToast("✅ " + nombre + " agregado");
+                abrirCarrito();
             });
         });
 
-        function agregarDirecto(clave, data) {
-            const comboKey = clave;
-            if (!carrito[comboKey]) {
-                carrito[comboKey] = {
-                    clave: clave,
-                    nombre: data.nombre,
-                    precio: data.precio,
-                    cant: 0,
-                    emoji: data.emoji,
-                    opciones: [],
-                    opcionesTexto: ""
-                };
-            }
-            carrito[comboKey].cant++;
-            actualizarCarrito();
-            mostrarToast("✅ " + data.nombre + " agregado");
-            abrirCarrito();
-        }
-
-        function abrirModal(clave, data) {
-            platilloActual = { clave: clave, data: data };
-            document.getElementById("modal-titulo").innerText = "Personaliza tu " + data.nombre;
-
-            const opciones = data.opciones.split("\n").filter(function(o) { return o.trim(); });
-            const cuerpo = document.getElementById("modal-cuerpo");
-            cuerpo.innerHTML = "";
-
-            opciones.forEach(function(op) {
-                const partes = op.split("|");
-                const nombre = partes[0].trim();
-                const precioExtra = partes[1] ? parseFloat(partes[1]) : 0;
-
-                const label = document.createElement("label");
-                label.className = "opcion-item";
-                label.innerHTML =
-                    '<input type="checkbox" class="opcion-checkbox" data-nombre="' + nombre + '" data-precio="' + precioExtra + '" onchange="actualizarPrecioModal()">' +
-                    '<span class="opcion-nombre">' + nombre + '</span>' +
-                    (precioExtra > 0 ? '<span class="opcion-precio">+Q' + precioExtra.toFixed(2) + '</span>' : '');
-                cuerpo.appendChild(label);
-            });
-
-            document.getElementById("modal-precio-total").innerText = "Q" + data.precio.toFixed(2);
-            document.getElementById("modal-opciones").classList.remove("oculto");
-        }
-
-        function actualizarPrecioModal() {
-            const checkboxes = document.querySelectorAll(".opcion-checkbox:checked");
-            let total = platilloActual.data.precio;
-
-            checkboxes.forEach(function(cb) {
-                total += parseFloat(cb.dataset.precio);
-            });
-
-            document.getElementById("modal-precio-total").innerText = "Q" + total.toFixed(2);
-        }
-
-        function cerrarModal() {
-            document.getElementById("modal-opciones").classList.add("oculto");
-            platilloActual = null;
-        }
-
-        function confirmarModal() {
-            if (!platilloActual) return;
-
-            const checkboxes = document.querySelectorAll(".opcion-checkbox:checked");
-            const opcionesSeleccionadas = [];
-            let precioExtra = 0;
-
-            checkboxes.forEach(function(cb) {
-                opcionesSeleccionadas.push(cb.dataset.nombre);
-                precioExtra += parseFloat(cb.dataset.precio);
-            });
-
-            const clave = platilloActual.clave;
-            const data = platilloActual.data;
-            const comboKey = clave + "|" + opcionesSeleccionadas.join(",");
-
-            if (!carrito[comboKey]) {
-                carrito[comboKey] = {
-                    clave: clave,
-                    nombre: data.nombre,
-                    precio: data.precio + precioExtra,
-                    precioBase: data.precio,
-                    cant: 0,
-                    emoji: data.emoji,
-                    opciones: opcionesSeleccionadas,
-                    opcionesTexto: opcionesSeleccionadas.join(", ")
-                };
-            }
-            carrito[comboKey].cant++;
-
-            actualizarCarrito();
-            mostrarToast("✅ " + data.nombre + " agregado");
-            abrirCarrito();
-            cerrarModal();
-        }
-
-        function sumar(comboKey) {
-            if (!carrito[comboKey]) return;
-            carrito[comboKey].cant++;
+        function sumar(clave) {
+            if (!carrito[clave]) return;
+            carrito[clave].cant++;
             actualizarCarrito();
         }
-        function restar(comboKey) {
-            if (!carrito[comboKey]) return;
-            carrito[comboKey].cant--;
-            if (carrito[comboKey].cant <= 0) delete carrito[comboKey];
+        function restar(clave) {
+            if (!carrito[clave]) return;
+            carrito[clave].cant--;
+            if (carrito[clave].cant <= 0) delete carrito[clave];
             actualizarCarrito();
         }
-        function eliminar(comboKey) {
-            if (!carrito[comboKey]) return;
-            delete carrito[comboKey];
+        function eliminar(clave) {
+            if (!carrito[clave]) return;
+            delete carrito[clave];
             actualizarCarrito();
             mostrarToast("🗑️ Eliminado");
         }
-        function cambiarCantidad(comboKey, valor) {
-            if (!carrito[comboKey]) return;
+        function cambiarCantidad(clave, valor) {
+            if (!carrito[clave]) return;
             let cant = parseInt(valor);
             if (isNaN(cant) || cant < 1) cant = 1;
             if (cant > 99) cant = 99;
-            carrito[comboKey].cant = cant;
+            carrito[clave].cant = cant;
             actualizarCarrito();
         }
 
@@ -291,8 +163,8 @@
                 carritoItems.innerHTML = "<p style='text-align:center;color:#999;padding:1rem 0;'>Tu carrito está vacío 🛒</p>";
             }
 
-            for (const comboKey in carrito) {
-                const item = carrito[comboKey];
+            for (const clave in carrito) {
+                const item = carrito[clave];
                 const sub = item.precio * item.cant;
                 total += sub;
                 cantidad += item.cant;
@@ -304,18 +176,17 @@
                         '<span class="carrito-emoji">' + item.emoji + '</span>' +
                         '<div>' +
                             '<strong>' + item.nombre + '</strong><br>' +
-                            (item.opcionesTexto ? '<small class="carrito-opciones">+ ' + item.opcionesTexto + '</small><br>' : '') +
                             '<small>Q' + item.precio.toFixed(2) + ' x ' + item.cant + ' = Q' + sub.toFixed(2) + '</small>' +
                         '</div>' +
                     '</div>' +
                     '<div class="carrito-item-acciones">' +
                         '<div class="carrito-controles">' +
-                            '<button onclick="restar(\'' + comboKey + '\')">−</button>' +
-                            '<input type="number" class="input-cantidad" value="' + item.cant + '" min="1" max="99" onchange="cambiarCantidad(\'' + comboKey + '\', this.value)">' +
-                            '<button onclick="sumar(\'' + comboKey + '\')">+</button>' +
+                            '<button onclick="restar(\'' + clave + '\')">−</button>' +
+                            '<input type="number" class="input-cantidad" value="' + item.cant + '" min="1" max="99" onchange="cambiarCantidad(\'' + clave + '\', this.value)">' +
+                            '<button onclick="sumar(\'' + clave + '\')">+</button>' +
                         '</div>' +
                         '<div class="carrito-subtotal">Q' + sub.toFixed(2) + '</div>' +
-                        '<button class="btn-eliminar-item" onclick="eliminar(\'' + comboKey + '\')">🗑️</button>' +
+                        '<button class="btn-eliminar-item" onclick="eliminar(\'' + clave + '\')">🗑️</button>' +
                     '</div>';
                 carritoItems.appendChild(div);
             }
@@ -343,15 +214,7 @@
             }
 
             const pedido = {};
-            const detallesOpciones = {};
-
-            for (const comboKey in carrito) {
-                const item = carrito[comboKey];
-                pedido[comboKey] = item.cant;
-                if (item.opciones.length > 0) {
-                    detallesOpciones[comboKey] = item.opcionesTexto;
-                }
-            }
+            for (const k in carrito) pedido[k] = carrito[k].cant;
 
             const telefono = document.getElementById("cliente-telefono").value.trim();
             const direccion = document.getElementById("cliente-direccion").value.trim();
@@ -360,7 +223,7 @@
                 const res = await fetch("/pedido", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ pedido, nombre, telefono, direccion, detallesOpciones })
+                    body: JSON.stringify({ pedido, nombre, telefono, direccion })
                 });
                 const data = await res.json();
 
@@ -387,7 +250,7 @@
             toast.textContent = mensaje;
             toast.classList.add("visible");
             clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(function() { toast.classList.remove("visible"); }, 1800);
+            toastTimeout = setTimeout(() => toast.classList.remove("visible"), 1800);
         }
 
         const chatBox = document.getElementById("chat-box");
@@ -428,13 +291,14 @@
             }
         });
 
+        // ============ SERVICE WORKER (PWA) ============
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
+            window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
-                .then(function(registration) {
+                .then(registration => {
                     console.log('✅ ServiceWorker registrado:', registration.scope);
                 })
-                .catch(function(error) {
+                .catch(error => {
                     console.log('❌ Error ServiceWorker:', error);
                 });
             });

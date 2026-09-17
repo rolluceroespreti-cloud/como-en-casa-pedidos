@@ -7,7 +7,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 
 def cargar_menu():
-    """Carga todo el menú desde la base de datos."""
+    """Carga todo el menú desde la BD ordenado por 'orden'."""
     if not DATABASE_URL:
         archivo = os.path.join(os.path.dirname(__file__), "menu.json")
         if not os.path.exists(archivo):
@@ -17,7 +17,7 @@ def cargar_menu():
 
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM menu ORDER BY nombre")
+    cur.execute("SELECT * FROM menu ORDER BY orden ASC, nombre ASC")
     filas = cur.fetchall()
     cur.close()
     conn.close()
@@ -33,12 +33,13 @@ def cargar_menu():
             "color": fila["color"] or "#888",
             "imagen": fila["imagen"] or "",
             "opciones": fila["opciones"] or "",
+            "orden": fila.get("orden", 999) or 999,
         }
     return menu
 
 
 def guardar_menu(menu):
-    """Guarda el menú completo en la base de datos."""
+    """Guarda el menú completo en la BD."""
     if not DATABASE_URL:
         archivo = os.path.join(os.path.dirname(__file__), "menu.json")
         with open(archivo, "w", encoding="utf-8") as f:
@@ -51,8 +52,8 @@ def guardar_menu(menu):
     cur.execute("DELETE FROM menu")
     for clave, item in menu.items():
         cur.execute("""
-            INSERT INTO menu (clave, nombre, precio, activo, descripcion, emoji, color, imagen, opciones)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO menu (clave, nombre, precio, activo, descripcion, emoji, color, imagen, opciones, orden)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             clave,
             item["nombre"],
@@ -63,6 +64,7 @@ def guardar_menu(menu):
             item.get("color", "#888"),
             item.get("imagen", ""),
             item.get("opciones", ""),
+            item.get("orden", 999),
         ))
 
     conn.commit()
@@ -71,13 +73,12 @@ def guardar_menu(menu):
 
 
 def menu_activo():
-    """Devuelve solo los platillos activos."""
+    """Devuelve solo los platillos activos, ya ordenados."""
     menu = cargar_menu()
     return {k: v for k, v in menu.items() if v.get("activo", True)}
 
 
 def mostrar_menu_texto():
-    """Formatea el menú para el chatbot."""
     menu = menu_activo()
     if not menu:
         return "😔 Por ahora no hay platillos disponibles."
@@ -93,7 +94,6 @@ def mostrar_menu_texto():
 
 
 def inicializar_menu_si_vacio():
-    """Si la BD está vacía, carga el menú desde menu.json."""
     menu = cargar_menu()
     if menu:
         return
