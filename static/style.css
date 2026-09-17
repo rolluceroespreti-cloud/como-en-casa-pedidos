@@ -16,9 +16,7 @@ body {
     background: #f7f7f9;
     color: #222;
     min-height: 100vh;
-    min-height: 100dvh;
     overflow-x: hidden;
-    padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 /* ============ HERO / HEADER ============ */
@@ -192,16 +190,20 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
 .btn-agregar:active { transform: scale(.95); }
 
 /* ============ CARRITO ============ */
-    .carrito {
-        width: 100%;
-        height: 100dvh;
-        max-height: 100dvh;
-        top: 0;
-        right: 0;
-        left: 0;
-        border-radius: 0;
-        animation: slideUp .3s ease-out;
-    }
+.carrito {
+    position: fixed;
+    right: 1.5rem;
+    top: 1.5rem;
+    width: 380px;
+    max-height: calc(100vh - 3rem);
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.3);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    animation: slideIn .25s ease-out;
+}
 @keyframes slideIn {
     from { transform: translateX(30px); opacity: 0; }
     to   { transform: translateX(0);    opacity: 1; }
@@ -335,15 +337,11 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
 }
 
 .carrito-footer {
-    padding: 1rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom, 0px)) 1.2rem;
+    padding: 1rem 1.2rem 1.2rem;
     border-top: 1px solid #eee;
     flex-shrink: 0;
     background: white;
     border-radius: 0 0 20px 20px;
-    position: sticky;
-    bottom: 0;
-    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
-    z-index: 10;
 }
 .total-linea {
     display: flex;
@@ -371,16 +369,14 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
     background: linear-gradient(135deg, #3a1e0f, #5a2e17);
     color: #f4d8b1;
     border: none;
-    padding: 1rem;
+    padding: .9rem;
     border-radius: 12px;
     font-weight: bold;
     cursor: pointer;
-    font-size: 1.05rem;
+    font-size: 1rem;
     margin-top: .5rem;
     transition: transform .15s, box-shadow .15s;
     box-shadow: 0 4px 12px rgba(58,30,15,.4);
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(232,165,71,.3);
 }
 .btn-confirmar:hover {
     transform: translateY(-2px);
@@ -1089,53 +1085,175 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
         bottom: -20px;
     }
 }
+
 /* ============ IMAGEN DE PLATILLO ============ */
 .platillo-imagen {
     width: 100%;
-    height: 180px;
-    overflow: hidden;
+    height: 180px;              /* Altura fija */
+    overflow: hidden;            /* Corta lo que se salga */
     background: #faf6f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px 20px 0 0;
 }
+
 .platillo-imagen img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover;          /* ⭐ CLAVE: recorta y ajusta sin deformar */
+    object-position: center;     /* Centra la imagen */
+    display: block;
     transition: transform .3s;
 }
+
 .platillo:hover .platillo-imagen img {
     transform: scale(1.08);
 }
 
-/* ============ FIX MÓVIL ============ */
+/* ============ AJUSTES PARA MÓVIL ============ */
 @media (max-width: 640px) {
     .platillo-imagen {
-        height: 130px;
+        height: 140px;              /* Un poco más pequeña en móvil */
     }
-    .carrito-items {
-        padding-bottom: 0.5rem;
-    }
-    .btn-confirmar {
-        padding: 1.1rem;
-        font-size: 1.1rem;
-        margin-bottom: .3rem;
-    }
-    /* Espacio extra al final del footer para la barra del navegador */
-    .carrito-footer {
-        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
-    }
+}
+/* ============ MODAL DE OPCIONES ============ */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+.modal.oculto { display: none !important; }
+
+.modal-contenido {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    animation: modalIn .25s;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
-/* ============ INPUT FILE ESTILIZADO ============ */
-input[type="file"] {
-    padding: .6rem;
-    border: 2px dashed #e8a547;
-    border-radius: 10px;
-    background: #faf6f0;
+@keyframes modalIn {
+    from { transform: scale(.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    background: linear-gradient(135deg, #3a1e0f, #5a2e17);
+    color: #f4d8b1;
+}
+.modal-header h3 { margin: 0; font-size: 1.1rem; }
+.modal-header button {
+    background: rgba(244, 216, 177, 0.2);
+    border: none;
+    color: #f4d8b1;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     cursor: pointer;
-    width: 100%;
-    font-family: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.modal-cuerpo {
+    padding: 1rem 1.2rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.opcion-item {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    padding: .8rem;
+    margin-bottom: .5rem;
+    background: #faf6f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background .2s;
+    border: 2px solid transparent;
+}
+.opcion-item:hover {
+    background: #f4d8b1;
+    border-color: #e8a547;
+}
+.opcion-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #e8a547;
+    flex-shrink: 0;
+}
+.opcion-nombre {
+    flex: 1;
+    font-weight: 500;
+    color: #3a1e0f;
+    font-size: .95rem;
+}
+.opcion-precio {
+    font-weight: bold;
+    color: #c88a2e;
+    font-size: .9rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.2rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    background: white;
+}
+.modal-precio {
+    text-align: right;
+    font-size: 1.1rem;
     color: #3a1e0f;
 }
-input[type="file"]:hover {
-    background: #f4d8b1;
+.modal-precio strong { color: #c88a2e; }
+
+.btn-confirmar-modal {
+    background: linear-gradient(135deg, #3a1e0f, #5a2e17);
+    color: #f4d8b1;
+    border: none;
+    padding: .9rem;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform .15s;
+}
+.btn-confirmar-modal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(58, 30, 15, 0.4);
+}
+
+.carrito-opciones {
+    color: #c88a2e;
+    font-style: italic;
+    font-size: .8rem;
+}
+
+@media (max-width: 640px) {
+    .modal-contenido {
+        max-height: 90vh;
+        border-radius: 20px 20px 0 0;
+        align-self: flex-end;
+    }
 }
