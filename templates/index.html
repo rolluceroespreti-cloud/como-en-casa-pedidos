@@ -141,7 +141,17 @@
                     <div class="estado-icono" id="estado-icono">🔔</div>
                     <h4 id="estado-titulo">Pedido recibido</h4>
                     <p id="estado-descripcion">Tu pedido está siendo procesado</p>
+                    <div class="estado-total">
+                        <span>💰 Total a pagar:</span>
+                        <strong id="estado-total-monto">Q0.00</strong>
+                    </div>
                 </div>
+
+                <div class="detalle-pedido" id="detalle-pedido">
+                    <h5>🍽️ Tu pedido:</h5>
+                    <div id="detalle-pedido-items"></div>
+                </div>
+
                 <div class="estado-timeline">
                     <div class="estado-paso" id="paso-pendiente">
                         <span>🔔</span>
@@ -290,7 +300,12 @@
                 document.getElementById("estado-titulo").textContent = info.titulo;
                 document.getElementById("estado-descripcion").textContent = info.desc;
 
-                // 🔥 Si está entregado, limpiar
+                // Mostrar el total
+                document.getElementById("estado-total-monto").textContent = "Q" + (data.total || pedidoActivo.total || 0).toFixed(2);
+
+                // Mostrar el detalle del pedido
+                mostrarDetallePedido(data.detalle);
+
                 if (estado === "entregado") {
                     setTimeout(() => {
                         eliminarPedidoActivo();
@@ -302,6 +317,46 @@
             } catch (e) {
                 console.error("Error consultando estado:", e);
             }
+        }
+
+        function mostrarDetallePedido(detalle) {
+            const contenedor = document.getElementById("detalle-pedido-items");
+            if (!contenedor) return;
+
+            if (!detalle) {
+                contenedor.innerHTML = "<p style='color:#999;font-size:.85rem;'>Cargando...</p>";
+                return;
+            }
+
+            // Extraer método de pago ANTES de limpiar
+            let metodoPago = null;
+            const matchPago = detalle.match(/💳 Pago: (\w+)/);
+            if (matchPago) {
+                metodoPago = matchPago[1].toUpperCase();
+            }
+
+            // Limpiar el detalle
+            let detalleLimpio = detalle;
+            detalleLimpio = detalleLimpio.replace(/💳 Pago: \w+/g, '');
+            detalleLimpio = detalleLimpio.replace(/📸 Boleta: https?:\/\/\S+/g, '');
+            detalleLimpio = detalleLimpio.trim();
+
+            const lineas = detalleLimpio.split("\n").filter(l => l.trim());
+
+            let html = "";
+            if (lineas.length === 0) {
+                html = "<p style='color:#999;font-size:.85rem;'>Sin detalle</p>";
+            } else {
+                html = lineas.map(linea => '<div class="detalle-item">' + linea + '</div>').join("");
+            }
+
+            // Agregar método de pago
+            if (metodoPago) {
+                const icono = metodoPago === 'EFECTIVO' ? '💵' : '📱';
+                html += '<div class="detalle-pago">' + icono + ' Pago: ' + metodoPago + '</div>';
+            }
+
+            contenedor.innerHTML = html;
         }
 
         function actualizarTimeline(estado) {
@@ -612,7 +667,6 @@
                 if (data.ok) {
                     alert("✅ ¡Pedido confirmado!\nPedido #" + data.pedido_id + "\nTotal: Q" + data.total.toFixed(2) + "\n\nGracias " + nombre);
 
-                    // 🔥 Guardar pedido activo
                     guardarPedidoActivo({
                         id: data.pedido_id,
                         total: data.total,

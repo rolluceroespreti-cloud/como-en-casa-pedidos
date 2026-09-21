@@ -219,7 +219,14 @@ def estado_pedido(pedido_id):
         pedidos = cargar_pedidos()
         for p in pedidos:
             if p["id"] == pedido_id:
-                return jsonify({"ok": True, "estado": p["estado"]})
+                return jsonify({
+                    "ok": True,
+                    "estado": p["estado"],
+                    "total": float(p["total"]),
+                    "detalle": p["detalle"],
+                    "cliente": p["cliente"],
+                    "fecha": p["fecha"]
+                })
         return jsonify({"ok": False, "error": "Pedido no encontrado"}), 404
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

@@ -1680,3 +1680,60 @@ input[type="file"]:hover {
     font-size: .8rem;
     font-weight: bold;
 }
+
+/* ============ TOTAL EN EL SEGUIMIENTO ============ */
+.estado-total {
+    margin-top: 1rem;
+    padding: .8rem 1rem;
+    background: linear-gradient(135deg, #fff8e7, #f4d8b1);
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid #e8a547;
+}
+.estado-total span {
+    font-weight: bold;
+    color: #3a1e0f;
+}
+.estado-total strong {
+    font-size: 1.3rem;
+    color: #c88a2e;
+}
+
+/* ============ DETALLE DEL PEDIDO ============ */
+.detalle-pedido {
+    background: #faf6f0;
+    padding: 1rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+    border-left: 4px solid #e8a547;
+}
+.detalle-pedido h5 {
+    color: #3a1e0f;
+    margin-bottom: .6rem;
+    font-size: .95rem;
+}
+#detalle-pedido-items {
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+}
+.detalle-item {
+    padding: .5rem .7rem;
+    background: white;
+    border-radius: 8px;
+    font-size: .85rem;
+    color: #333;
+    border-left: 3px solid #e8a547;
+}
+.detalle-pago {
+    margin-top: .5rem;
+    padding: .5rem .7rem;
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-radius: 8px;
+    font-size: .85rem;
+    font-weight: bold;
+    color: #155724;
+    text-align: center;
+}
