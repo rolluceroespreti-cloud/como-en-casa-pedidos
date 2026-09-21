@@ -153,9 +153,15 @@
         };
         {% endfor %}
 
-        // ==================== CARRITO ====================
-        let carrito = {};
+        // ==================== CARRITO CON PERSISTENCIA ====================
+        // 🔥 Recuperar carrito guardado al cargar la página
+        let carrito = JSON.parse(localStorage.getItem("carritoComoEnCasa") || "{}");
         let platilloActual = null;
+
+        // 🔥 Guardar carrito en localStorage
+        function guardarCarrito() {
+            localStorage.setItem("carritoComoEnCasa", JSON.stringify(carrito));
+        }
 
         const carritoPanel = document.getElementById("carrito");
         const carritoItems = document.getElementById("carrito-items");
@@ -200,6 +206,7 @@
             }
             carrito[comboKey].cant++;
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
             mostrarToast("✅ " + data.nombre + " agregado");
             abrirCarrito();
         }
@@ -282,6 +289,7 @@
             carrito[comboKey].cant++;
 
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
             mostrarToast("✅ " + data.nombre + " agregado");
             abrirCarrito();
             cerrarModal();
@@ -291,17 +299,20 @@
             if (!carrito[comboKey]) return;
             carrito[comboKey].cant++;
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
         }
         function restar(comboKey) {
             if (!carrito[comboKey]) return;
             carrito[comboKey].cant--;
             if (carrito[comboKey].cant <= 0) delete carrito[comboKey];
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
         }
         function eliminar(comboKey) {
             if (!carrito[comboKey]) return;
             delete carrito[comboKey];
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
             mostrarToast("🗑️ Eliminado");
         }
         function cambiarCantidad(comboKey, valor) {
@@ -311,6 +322,7 @@
             if (cant > 99) cant = 99;
             carrito[comboKey].cant = cant;
             actualizarCarrito();
+            guardarCarrito();  // 🔥 Guardar
         }
 
         function actualizarCarrito() {
@@ -450,6 +462,7 @@
                 if (data.ok) {
                     alert("✅ ¡Pedido confirmado!\nPedido #" + data.pedido_id + "\nTotal: Q" + data.total.toFixed(2) + "\n\nGracias " + nombre);
                     carrito = {};
+                    localStorage.removeItem("carritoComoEnCasa");  // 🔥 Limpiar storage
                     actualizarCarrito();
                     cerrarCarrito();
                     document.getElementById("cliente-nombre").value = "";
@@ -523,6 +536,11 @@
                     console.log('❌ Error ServiceWorker:', error);
                 });
             });
+        }
+
+        // 🔥 Al cargar la página, si hay carrito guardado, actualizar la vista
+        if (Object.keys(carrito).length > 0) {
+            actualizarCarrito();
         }
     </script>
 </body>
