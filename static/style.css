@@ -1529,3 +1529,41 @@ input[type="file"]:hover {
         max-width: 100px !important;
     }
 }
+
+/* ============ BOTÓN FIJO AL FONDO DEL CARRITO ============ */
+.carrito-boton-fijo {
+    padding: .9rem 1.2rem;
+    padding-bottom: calc(.9rem + env(safe-area-inset-bottom, 0px));
+    background: white;
+    border-top: 2px solid #e8a547;
+    box-shadow: 0 -4px 15px rgba(0,0,0,.15);
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+.carrito-boton-fijo .btn-confirmar {
+    width: 100%;
+    margin: 0;
+    position: static;
+    padding: 1rem;
+    font-size: 1.05rem;
+}
+
+/* En móvil - que el botón sea más grande y el footer tenga scroll interno */
+@media (max-width: 640px) {
+    .carrito-footer {
+        max-height: 50vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 1rem 1rem .8rem 1rem;
+    }
+
+    .carrito-boton-fijo {
+        padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1rem;
+    }
+
+    .carrito-boton-fijo .btn-confirmar {
+        padding: 1.1rem;
+        font-size: 1.1rem;
+    }
+}
