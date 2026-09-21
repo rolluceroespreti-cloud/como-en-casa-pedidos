@@ -1,4 +1,4 @@
-const CACHE_NAME = 'como-en-casa-v4';
+const CACHE_NAME = 'como-en-casa-v7';
 const urlsToCache = [
   '/static/style.css',
   '/static/manifest.json',
