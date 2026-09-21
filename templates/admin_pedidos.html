@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛎️ Pedidos - Mi Restaurante</title>
+    <title>🛎️ Pedidos - Como en Casa</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -16,7 +16,7 @@
     </nav>
 
     <main style="max-width: 1400px; padding: 2rem 1.5rem; margin: auto;">
-        <h1 style="color: #1d3557; margin-bottom: 1.5rem;">🛎️ Panel de Pedidos</h1>
+        <h1 style="color: #3a1e0f; margin-bottom: 1.5rem;">🛎️ Panel de Pedidos</h1>
 
         <div class="stats-grid">
             <div class="stat-card" style="--stat-color: #e63946;">
@@ -96,6 +96,36 @@
                 botones = '<button class="btn-accion btn-entregar" onclick="cambiarEstado(' + p.id + ', \'entregado\')">📦 Entregado</button>';
             }
 
+            // 🔥 DETECTAR BOLETA Y MÉTODO DE PAGO
+            let boletaHTML = "";
+            let detalleLimpio = p.detalle;
+
+            // Buscar el link de la boleta
+            const matchBoleta = p.detalle.match(/📸 Boleta: (https?:\/\/\S+)/);
+            if (matchBoleta) {
+                const boletaUrl = matchBoleta[1];
+                boletaHTML = `
+                    <div class="boleta-admin">
+                        <a href="${boletaUrl}" target="_blank" class="btn-ver-boleta">
+                            📸 Ver boleta de pago
+                        </a>
+                        <img src="${boletaUrl}" alt="Boleta" class="boleta-thumb" onclick="window.open('${boletaUrl}', '_blank')">
+                    </div>
+                `;
+                // Quitar el link del detalle para no duplicar
+                detalleLimpio = detalleLimpio.replace(/📸 Boleta: https?:\/\/\S+/, '').trim();
+            }
+
+            // Detectar método de pago
+            let metodoPagoHTML = "";
+            const matchPago = p.detalle.match(/💳 Pago: (\w+)/);
+            if (matchPago) {
+                const metodo = matchPago[1].toLowerCase();
+                const color = metodo === 'efectivo' ? '#7fb069' : '#e8a547';
+                metodoPagoHTML = `<span class="badge-pago" style="background: ${color};">💳 ${metodo.toUpperCase()}</span>`;
+                detalleLimpio = detalleLimpio.replace(/💳 Pago: \w+/, '').trim();
+            }
+
             return `
                 <div class="pedido-card" style="border-left: 6px solid ${colorEstado(p.estado)};">
                     <div class="pedido-header">
@@ -111,12 +141,14 @@
                         <strong>👤 ${p.cliente}</strong>
                         ${p.telefono ? `<span>📞 ${p.telefono}</span>` : ""}
                         ${p.direccion ? `<span>📍 ${p.direccion}</span>` : ""}
+                        ${metodoPagoHTML ? `<span style="margin-top: .3rem;">${metodoPagoHTML}</span>` : ""}
                     </div>
-                    <pre class="pedido-detalle">${p.detalle}</pre>
+                    <pre class="pedido-detalle">${detalleLimpio}</pre>
+                    ${boletaHTML}
                     <div class="pedido-total">Total: <strong>Q${p.total.toFixed(2)}</strong></div>
                     <div class="pedido-acciones">
                         ${botones}
-                        <button class="btn-accion btn-imprimir" onclick='imprimirPedido(${JSON.stringify(p)})' title="Imprimir recibo">🖨️</button>
+                        <button class="btn-accion btn-imprimir" onclick='imprimirPedido(${JSON.stringify(p)})'>🖨️</button>
                         <button class="btn-accion btn-eliminar" onclick="eliminar(${p.id})">🗑️</button>
                     </div>
                 </div>
@@ -172,7 +204,7 @@
         }
 
         async function eliminar(id) {
-            if (!confirm("¿Eliminar este pedido?")) return;
+            if (!confirm("¿Eliminar este pedido permanentemente?")) return;
             await fetch("/admin/pedidos/eliminar", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -181,11 +213,18 @@
             cargarPedidos();
         }
 
-        // ---------- IMPRIMIR RECIBO ----------
         function imprimirPedido(p) {
             const ventana = window.open("", "_blank", "width=400,height=650");
 
-            const lineasHTML = p.detalle.split("\n").map(l => `<div class="item">${l}</div>`).join("");
+            let detalleLimpio = p.detalle;
+            let boletaHTML = "";
+            const matchBoleta = p.detalle.match(/📸 Boleta: (https?:\/\/\S+)/);
+            if (matchBoleta) {
+                boletaHTML = '<div style="text-align: center; margin-top: 10px;"><img src="' + matchBoleta[1] + '" style="max-width: 100%; border-radius: 8px;"></div>';
+                detalleLimpio = detalleLimpio.replace(/📸 Boleta: https?:\/\/\S+/, '').trim();
+            }
+
+            const lineasHTML = detalleLimpio.split("\n").map(l => `<div class="item">${l}</div>`).join("");
 
             ventana.document.write(`
                 <!DOCTYPE html>
@@ -197,56 +236,29 @@
                         * { font-family: 'Courier New', monospace; margin: 0; padding: 0; box-sizing: border-box; }
                         body { padding: 15px; max-width: 300px; margin: auto; color: #000; }
                         .header { text-align: center; margin-bottom: 15px; border-bottom: 2px dashed #000; padding-bottom: 10px; }
-                        .header h1 { font-size: 18px; margin-bottom: 3px; letter-spacing: 1px; }
-                        .header p { font-size: 11px; }
+                        .header h1 { font-size: 18px; margin-bottom: 3px; }
                         .info { font-size: 12px; margin-bottom: 10px; line-height: 1.5; }
-                        .info div { margin-bottom: 2px; }
                         .divider { border-top: 1px dashed #000; margin: 10px 0; }
                         .items { font-size: 12px; line-height: 1.6; }
-                        .item { margin-bottom: 4px; }
                         .total { font-size: 16px; font-weight: bold; text-align: right; margin-top: 10px; border-top: 2px dashed #000; padding-top: 10px; }
-                        .footer { text-align: center; margin-top: 20px; font-size: 11px; border-top: 1px dashed #000; padding-top: 10px; line-height: 1.5; }
-                        @media print {
-                            body { padding: 5px; }
-                        }
+                        .footer { text-align: center; margin-top: 20px; font-size: 11px; }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <h1>MI RESTAURANTE</h1>
-                        <p>Recibo de pedido</p>
-                    </div>
-
+                    <div class="header"><h1>COMO EN CASA</h1><p>Recibo de pedido</p></div>
                     <div class="info">
                         <div><strong>Pedido #:</strong> ${p.id}</div>
                         <div><strong>Fecha:</strong> ${p.fecha}</div>
                         <div><strong>Cliente:</strong> ${p.cliente}</div>
-                        ${p.telefono ? `<div><strong>Teléfono:</strong> ${p.telefono}</div>` : ""}
+                        ${p.telefono ? `<div><strong>Tel:</strong> ${p.telefono}</div>` : ""}
                         ${p.direccion ? `<div><strong>Dirección:</strong> ${p.direccion}</div>` : ""}
-                        <div><strong>Estado:</strong> ${p.estado.toUpperCase()}</div>
                     </div>
-
                     <div class="divider"></div>
-
-                    <div class="items">
-                        ${lineasHTML}
-                    </div>
-
-                    <div class="total">
-                        TOTAL: Q${p.total.toFixed(2)}
-                    </div>
-
-                    <div class="footer">
-                        ¡Gracias por su compra!<br>
-                        Vuelva pronto
-                    </div>
-
-                    <script>
-                        window.onload = function() {
-                            window.print();
-                            setTimeout(() => window.close(), 800);
-                        };
-                    <\/script>
+                    <div class="items">${lineasHTML}</div>
+                    <div class="total">TOTAL: Q${p.total.toFixed(2)}</div>
+                    ${boletaHTML}
+                    <div class="footer">¡Gracias por su compra!</div>
+                    <script>window.onload=function(){window.print();setTimeout(()=>window.close(),800);}<\/script>
                 </body>
                 </html>
             `);
@@ -263,7 +275,7 @@
         });
 
         window.addEventListener("focus", () => {
-            document.title = "🛎️ Pedidos - Mi Restaurante";
+            document.title = "🛎️ Pedidos - Como en Casa";
         });
 
         cargarPedidos();

@@ -26,6 +26,9 @@
             <button id="btn-carrito" class="btn-carrito">
                 🛒 Ver pedido <span id="contador-carrito">0</span>
             </button>
+            <button id="btn-seguimiento" class="btn-seguimiento oculto" onclick="verSeguimiento()">
+                📦 Ver estado del pedido
+            </button>
         </div>
         <div class="hero-olas">
             <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
@@ -72,9 +75,7 @@
             <h3>🛒 Tu pedido</h3>
             <button onclick="cerrarCarrito()">✖</button>
         </div>
-
         <div id="carrito-items" class="carrito-items"></div>
-
         <div class="carrito-footer">
             <div class="total-linea">
                 <span>Total:</span>
@@ -85,7 +86,6 @@
             <input type="text" id="cliente-telefono" placeholder="Tu teléfono (opcional)">
             <input type="text" id="cliente-direccion" placeholder="Dirección de entrega (opcional)">
 
-            <!-- MÉTODO DE PAGO -->
             <div class="metodo-pago">
                 <label class="pago-titulo">💳 Método de pago:</label>
                 <div class="pago-opciones">
@@ -100,7 +100,6 @@
                 </div>
             </div>
 
-            <!-- BOLETA DE PAGO -->
             <div id="boleta-section" class="boleta-section oculto">
                 <label>📸 Sube tu boleta de pago:</label>
                 <input type="file" id="boleta-archivo" accept="image/*">
@@ -109,7 +108,6 @@
             </div>
         </div>
 
-        <!-- 🔥 BOTÓN FIJO AL FONDO - SIEMPRE VISIBLE -->
         <div class="carrito-boton-fijo">
             <button class="btn-confirmar" onclick="confirmarPedido()">✅ Confirmar pedido</button>
         </div>
@@ -127,6 +125,41 @@
                     Total: <strong id="modal-precio-total">Q0.00</strong>
                 </div>
                 <button class="btn-confirmar-modal" onclick="confirmarModal()">✅ Agregar al carrito</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de seguimiento del pedido -->
+    <div id="modal-seguimiento" class="modal oculto">
+        <div class="modal-contenido">
+            <div class="modal-header">
+                <h3>📦 Estado de tu pedido</h3>
+                <button onclick="cerrarSeguimiento()">✖</button>
+            </div>
+            <div class="modal-cuerpo">
+                <div class="estado-pedido">
+                    <div class="estado-icono" id="estado-icono">🔔</div>
+                    <h4 id="estado-titulo">Pedido recibido</h4>
+                    <p id="estado-descripcion">Tu pedido está siendo procesado</p>
+                </div>
+                <div class="estado-timeline">
+                    <div class="estado-paso" id="paso-pendiente">
+                        <span>🔔</span>
+                        <div><strong>Pedido recibido</strong><small>El restaurante recibió tu pedido</small></div>
+                    </div>
+                    <div class="estado-paso" id="paso-preparando">
+                        <span>👨‍🍳</span>
+                        <div><strong>Preparando</strong><small>Estamos preparando tu comida</small></div>
+                    </div>
+                    <div class="estado-paso" id="paso-listo">
+                        <span>✅</span>
+                        <div><strong>Listo</strong><small>Tu pedido está listo</small></div>
+                    </div>
+                    <div class="estado-paso" id="paso-entregado">
+                        <span>📦</span>
+                        <div><strong>Entregado</strong><small>¡Disfruta tu comida!</small></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -162,27 +195,133 @@
         let carrito = {};
         let platilloActual = null;
 
-        // Cargar carrito del localStorage al iniciar
         try {
             const guardado = localStorage.getItem("carritoComoEnCasa");
             if (guardado) {
                 carrito = JSON.parse(guardado);
-                console.log("✅ Carrito recuperado:", Object.keys(carrito).length, "items");
+                console.log("✅ Carrito recuperado:", Object.keys(carrito).length);
             }
         } catch (e) {
-            console.error("❌ Error al cargar carrito:", e);
             carrito = {};
         }
 
         function guardarCarrito() {
             try {
                 localStorage.setItem("carritoComoEnCasa", JSON.stringify(carrito));
-                console.log("💾 Carrito guardado:", Object.keys(carrito).length, "items");
-            } catch (e) {
-                console.error("❌ Error al guardar carrito:", e);
+            } catch (e) {}
+        }
+
+        // ==================== SEGUIMIENTO DE PEDIDO ====================
+        let pedidoActivo = null;
+
+        try {
+            const guardado = localStorage.getItem("pedidoActivo");
+            if (guardado) {
+                pedidoActivo = JSON.parse(guardado);
+                console.log("📦 Pedido activo:", pedidoActivo);
+            }
+        } catch (e) {}
+
+        function guardarPedidoActivo(pedido) {
+            try {
+                localStorage.setItem("pedidoActivo", JSON.stringify(pedido));
+                pedidoActivo = pedido;
+            } catch (e) {}
+        }
+
+        function eliminarPedidoActivo() {
+            try {
+                localStorage.removeItem("pedidoActivo");
+                pedidoActivo = null;
+            } catch (e) {}
+        }
+
+        function actualizarBotonSeguimiento() {
+            const btn = document.getElementById("btn-seguimiento");
+            const btnCarrito = document.getElementById("btn-carrito");
+
+            if (pedidoActivo) {
+                btn.classList.remove("oculto");
+                btnCarrito.classList.add("oculto");
+            } else {
+                btn.classList.add("oculto");
+                btnCarrito.classList.remove("oculto");
             }
         }
 
+        async function verSeguimiento() {
+            if (!pedidoActivo) {
+                alert("No hay pedido activo");
+                return;
+            }
+            document.getElementById("modal-seguimiento").classList.remove("oculto");
+            await consultarEstadoPedido();
+        }
+
+        function cerrarSeguimiento() {
+            document.getElementById("modal-seguimiento").classList.add("oculto");
+        }
+
+        async function consultarEstadoPedido() {
+            if (!pedidoActivo) return;
+
+            try {
+                const res = await fetch("/estado_pedido/" + pedidoActivo.id);
+                const data = await res.json();
+
+                if (!data.ok) {
+                    eliminarPedidoActivo();
+                    actualizarBotonSeguimiento();
+                    document.getElementById("modal-seguimiento").classList.add("oculto");
+                    return;
+                }
+
+                const estado = data.estado;
+                actualizarTimeline(estado);
+
+                const textos = {
+                    "pendiente": { icono: "🔔", titulo: "Pedido recibido", desc: "El restaurante recibió tu pedido" },
+                    "preparando": { icono: "👨‍🍳", titulo: "Preparando tu pedido", desc: "Estamos cocinando tu comida" },
+                    "listo": { icono: "✅", titulo: "¡Pedido listo!", desc: "Pronto saldrá a entrega" },
+                    "entregado": { icono: "📦", titulo: "¡Entregado!", desc: "¡Disfruta tu comida!" }
+                };
+                const info = textos[estado] || textos["pendiente"];
+                document.getElementById("estado-icono").textContent = info.icono;
+                document.getElementById("estado-titulo").textContent = info.titulo;
+                document.getElementById("estado-descripcion").textContent = info.desc;
+
+                // 🔥 Si está entregado, limpiar
+                if (estado === "entregado") {
+                    setTimeout(() => {
+                        eliminarPedidoActivo();
+                        actualizarBotonSeguimiento();
+                        document.getElementById("modal-seguimiento").classList.add("oculto");
+                        alert("✅ Tu pedido fue entregado. ¡Gracias por tu compra!");
+                    }, 3000);
+                }
+            } catch (e) {
+                console.error("Error consultando estado:", e);
+            }
+        }
+
+        function actualizarTimeline(estado) {
+            const pasos = ["pendiente", "preparando", "listo", "entregado"];
+            const indexActual = pasos.indexOf(estado);
+
+            pasos.forEach((paso, i) => {
+                const el = document.getElementById("paso-" + paso);
+                if (el) {
+                    if (i <= indexActual) el.classList.add("completado");
+                    else el.classList.remove("completado");
+                }
+            });
+        }
+
+        setInterval(() => {
+            if (pedidoActivo) consultarEstadoPedido();
+        }, 30000);
+
+        // ==================== CARRITO ====================
         const carritoPanel = document.getElementById("carrito");
         const carritoItems = document.getElementById("carrito-items");
         const totalEl = document.getElementById("total");
@@ -265,11 +404,7 @@
         function actualizarPrecioModal() {
             const checkboxes = document.querySelectorAll(".opcion-checkbox:checked");
             let total = platilloActual.data.precio;
-
-            checkboxes.forEach(function(cb) {
-                total += parseFloat(cb.dataset.precio);
-            });
-
+            checkboxes.forEach(function(cb) { total += parseFloat(cb.dataset.precio); });
             document.getElementById("modal-precio-total").innerText = "Q" + total.toFixed(2);
         }
 
@@ -307,7 +442,6 @@
                 };
             }
             carrito[comboKey].cant++;
-
             guardarCarrito();
             actualizarCarrito();
             mostrarToast("✅ " + data.nombre + " agregado");
@@ -404,7 +538,6 @@
             }
         }
 
-        // Subir boleta
         document.getElementById("boleta-archivo").addEventListener("change", async function(e) {
             const archivo = e.target.files[0];
             if (!archivo) return;
@@ -416,10 +549,7 @@
             formData.append("imagen", archivo);
 
             try {
-                const res = await fetch("/subir_boleta", {
-                    method: "POST",
-                    body: formData
-                });
+                const res = await fetch("/subir_boleta", { method: "POST", body: formData });
                 const data = await res.json();
 
                 if (data.ok) {
@@ -481,6 +611,14 @@
 
                 if (data.ok) {
                     alert("✅ ¡Pedido confirmado!\nPedido #" + data.pedido_id + "\nTotal: Q" + data.total.toFixed(2) + "\n\nGracias " + nombre);
+
+                    // 🔥 Guardar pedido activo
+                    guardarPedidoActivo({
+                        id: data.pedido_id,
+                        total: data.total,
+                        fecha: new Date().toISOString()
+                    });
+
                     carrito = {};
                     localStorage.removeItem("carritoComoEnCasa");
                     actualizarCarrito();
@@ -490,6 +628,8 @@
                     document.getElementById("cliente-direccion").value = "";
                     document.getElementById("boleta-url").value = "";
                     document.getElementById("boleta-preview").innerHTML = "";
+
+                    actualizarBotonSeguimiento();
                 } else {
                     alert("❌ Error: " + data.error);
                 }
@@ -558,8 +698,9 @@
             });
         }
 
-        // Actualizar vista al cargar
+        // Inicializar vista
         actualizarCarrito();
+        actualizarBotonSeguimiento();
     </script>
 </body>
 </html>
