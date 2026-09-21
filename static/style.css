@@ -1474,3 +1474,58 @@ input[type="file"]:hover {
     main { max-width: 1400px; }
     .grid-menu { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ============ BOTÓN FIJO AL FONDO DEL CARRITO ============ */
+.carrito-boton-fijo {
+    padding: .8rem 1.2rem;
+    padding-bottom: calc(.8rem + env(safe-area-inset-bottom, 0px));
+    background: white;
+    border-top: 2px solid #e8a547;
+    box-shadow: 0 -4px 15px rgba(0,0,0,.15);
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+.carrito-boton-fijo .btn-confirmar {
+    width: 100%;
+    margin: 0;
+    position: static;
+}
+
+/* En móvil - Footer con scroll interno */
+@media (max-width: 640px) {
+    .carrito-footer {
+        max-height: 55vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 1rem 1rem .5rem 1rem;
+    }
+
+    .carrito-boton-fijo {
+        padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1rem;
+    }
+
+    .btn-confirmar {
+        padding: 1.1rem;
+        font-size: 1.1rem;
+    }
+
+    .carrito-footer input {
+        padding: .6rem .8rem;
+        font-size: .95rem;
+    }
+
+    .metodo-pago {
+        padding: .5rem;
+        margin: .4rem 0;
+    }
+
+    .boleta-section {
+        padding: .5rem;
+        margin: .4rem 0;
+    }
+
+    #boleta-preview img {
+        max-width: 100px !important;
+    }
+}

@@ -72,7 +72,9 @@
             <h3>🛒 Tu pedido</h3>
             <button onclick="cerrarCarrito()">✖</button>
         </div>
+
         <div id="carrito-items" class="carrito-items"></div>
+
         <div class="carrito-footer">
             <div class="total-linea">
                 <span>Total:</span>
@@ -105,7 +107,10 @@
                 <div id="boleta-preview"></div>
                 <input type="hidden" id="boleta-url" value="">
             </div>
+        </div>
 
+        <!-- 🔥 BOTÓN FIJO AL FONDO - SIEMPRE VISIBLE -->
+        <div class="carrito-boton-fijo">
             <button class="btn-confirmar" onclick="confirmarPedido()">✅ Confirmar pedido</button>
         </div>
     </aside>
@@ -153,11 +158,11 @@
         };
         {% endfor %}
 
-        // ==================== CARRITO CON PERSISTENCIA (localStorage) ====================
+        // ==================== CARRITO CON PERSISTENCIA ====================
         let carrito = {};
         let platilloActual = null;
 
-        // 🔥 CARGAR carrito del localStorage al iniciar
+        // Cargar carrito del localStorage al iniciar
         try {
             const guardado = localStorage.getItem("carritoComoEnCasa");
             if (guardado) {
@@ -169,7 +174,6 @@
             carrito = {};
         }
 
-        // 🔥 GUARDAR carrito en localStorage
         function guardarCarrito() {
             try {
                 localStorage.setItem("carritoComoEnCasa", JSON.stringify(carrito));
@@ -542,7 +546,6 @@
             }
         });
 
-        // ============ SERVICE WORKER (PWA) ============
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
@@ -555,11 +558,8 @@
             });
         }
 
-        // 🔥 ACTUALIZAR VISTA AL CARGAR (por si hay carrito guardado)
+        // Actualizar vista al cargar
         actualizarCarrito();
-        if (Object.keys(carrito).length > 0) {
-            console.log("🔄 Mostrando carrito recuperado con", Object.keys(carrito).length, "items");
-        }
     </script>
 </body>
 </html>
