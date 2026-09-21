@@ -4,6 +4,7 @@ import uuid
 import os
 import io
 import csv
+import re
 import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -23,11 +24,10 @@ app.secret_key = "cambia_esta_clave_secreta_123"
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# Configuración de subida de imágenes
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5 MB máximo
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 
@@ -36,18 +36,86 @@ def archivo_permitido(nombre):
     return '.' in nombre and nombre.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def parsear_opciones(opciones_texto):
+    """
+    Convierte el texto de opciones en lista de dicts.
+    Acepta: "Lechuga|10", "Lechuga Q10", "Lechuga - 10", "Lechuga"
+    """
+    resultado = []
+    if not opciones_texto:
+        return resultado
+
+    for linea in opciones_texto.split("\n"):
+        linea = linea.strip()
+        if not linea:
+            continue
+
+        partes = re.split(r'[|]|\s+Q\s*|\s+-\s+', linea, maxsplit=1, flags=re.IGNORECASE)
+        nombre = partes[0].strip()
+        precio = 0
+
+        if len(partes) > 1:
+            precio_limpio = re.sub(r'[^0-9.]', '', partes[1])
+            try:
+                precio = float(precio_limpio) if precio_limpio else 0
+            except:
+                precio = 0
+
+        resultado.append({"nombre": nombre, "precio": precio})
+
+    return resultado
+
+
+def calcular_extra_opciones(clave, opciones_elegidas, menu):
+    if clave not in menu:
+        return 0
+    opciones_data = menu[clave].get("opciones", "")
+    opciones_lista = parsear_opciones(opciones_data)
+    precio_extra = 0
+    for opcion in opciones_lista:
+        if opcion["nombre"] in opciones_elegidas:
+            precio_extra += opcion["precio"]
+    return precio_extra
+
+
+# 🔥 Inicializar base de datos
+from database import init_db
+from menu import inicializar_menu_si_vacio
+
+try:
+    init_db()
+    inicializar_menu_si_vacio()
+    print("✅ Base de datos lista")
+except Exception as e:
+    print(f"⚠️ Error con BD: {e}")
+    print("   La app funcionará con archivos JSON locales")
+
+
 # ------------------- UTILIDADES -------------------
-def calcular_total(pedido):
-    """Calcula el total de un pedido dict {clave: cantidad}."""
+def calcular_total(pedido, detalles_opciones=None):
     menu = menu_activo()
     total = 0
-    for clave, cant in pedido.items():
-        if clave in menu:
-            total += menu[clave]["precio"] * cant
+
+    for combo_key, cant in pedido.items():
+        partes = combo_key.split("|", 1)
+        clave = partes[0]
+        opciones_str = partes[1] if len(partes) > 1 else ""
+
+        if clave not in menu:
+            continue
+
+        precio_base = menu[clave]["precio"]
+        precio_extra = 0
+
+        if opciones_str:
+            opciones_elegidas = [o.strip() for o in opciones_str.split(",")]
+            precio_extra = calcular_extra_opciones(clave, opciones_elegidas, menu)
+
+        total += (precio_base + precio_extra) * cant
+
     return total
 
 
-# ------------------- SERVICE WORKER (PWA) -------------------
 @app.route('/service-worker.js')
 def service_worker():
     return send_from_directory(app.static_folder, 'service-worker.js')
@@ -87,24 +155,45 @@ def pedido():
         nombre = data.get("nombre", "Cliente")
         telefono = data.get("telefono", "")
         direccion = data.get("direccion", "")
+        detalles_opciones = data.get("detallesOpciones", {})
 
         if not pedido_cliente:
             return jsonify({"ok": False, "error": "Pedido vacío"}), 400
 
-        total = calcular_total(pedido_cliente)
-
         menu = menu_activo()
         detalle_lineas = []
-        for clave, cant in pedido_cliente.items():
-            if clave in menu:
-                sub = menu[clave]["precio"] * cant
-                detalle_lineas.append(f"{cant} x {menu[clave]['nombre']} = Q{sub:.2f}")
+        total_calculado = 0
+
+        for combo_key, cant in pedido_cliente.items():
+            partes = combo_key.split("|", 1)
+            clave_real = partes[0]
+            opciones_str = partes[1] if len(partes) > 1 else ""
+
+            if clave_real not in menu:
+                continue
+
+            precio_base = menu[clave_real]["precio"]
+            precio_extra = 0
+
+            if opciones_str:
+                opciones_elegidas = [o.strip() for o in opciones_str.split(",")]
+                precio_extra = calcular_extra_opciones(clave_real, opciones_elegidas, menu)
+
+            subtotal = (precio_base + precio_extra) * cant
+            total_calculado += subtotal
+
+            detalle_item = f"{cant} x {menu[clave_real]['nombre']}"
+            if opciones_str:
+                detalle_item += f" ({opciones_str})"
+            detalle_item += f" = Q{subtotal:.2f}"
+            detalle_lineas.append(detalle_item)
+
         detalle = "\n".join(detalle_lineas)
 
-        nuevo = crear_pedido(pedido_cliente, nombre, telefono, direccion, total, detalle)
-        print(f"✅ Pedido #{nuevo['id']} guardado")
+        nuevo = crear_pedido(pedido_cliente, nombre, telefono, direccion, total_calculado, detalle)
+        print(f"✅ Pedido #{nuevo['id']} guardado - Total: Q{total_calculado:.2f}")
 
-        return jsonify({"ok": True, "total": total, "pedido_id": nuevo["id"]})
+        return jsonify({"ok": True, "total": total_calculado, "pedido_id": nuevo["id"]})
 
     except Exception as e:
         import traceback
@@ -155,6 +244,9 @@ def admin_guardar():
             return jsonify({"ok": False, "error": "Clave vacía"}), 400
         if clave in menu:
             return jsonify({"ok": False, "error": "Ya existe esa clave"}), 400
+
+        max_orden = max([item.get("orden", 0) for item in menu.values()], default=0)
+
         menu[clave] = {
             "nombre": data["nombre"],
             "precio": float(data["precio"]),
@@ -163,6 +255,8 @@ def admin_guardar():
             "emoji": data.get("emoji", "🍽️"),
             "color": data.get("color", "#888"),
             "imagen": data.get("imagen", ""),
+            "opciones": data.get("opciones", ""),
+            "orden": max_orden + 1,
         }
 
     elif data["accion"] == "editar":
@@ -176,6 +270,8 @@ def admin_guardar():
             menu[clave]["emoji"] = data["emoji"]
         if "imagen" in data:
             menu[clave]["imagen"] = data["imagen"]
+        if "opciones" in data:
+            menu[clave]["opciones"] = data["opciones"]
 
     elif data["accion"] == "toggle":
         clave = data["clave"]
@@ -188,6 +284,25 @@ def admin_guardar():
 
     else:
         return jsonify({"ok": False, "error": "Acción inválida"}), 400
+
+    guardar_menu(menu)
+    return jsonify({"ok": True})
+
+
+@app.route("/admin/reordenar", methods=["POST"])
+def admin_reordenar():
+    """Reordena los platillos."""
+    if not requiere_admin():
+        return jsonify({"ok": False, "error": "No autorizado"}), 401
+
+    data = request.get_json()
+    nuevo_orden = data.get("orden", [])
+
+    menu = cargar_menu()
+
+    for i, clave in enumerate(nuevo_orden):
+        if clave in menu:
+            menu[clave]["orden"] = i + 1
 
     guardar_menu(menu)
     return jsonify({"ok": True})
@@ -308,9 +423,10 @@ def admin_reportes_datos():
     productos = {}
     for p in filtrados:
         for clave, cant in p.get("items", {}).items():
-            if clave not in productos:
-                productos[clave] = {"cantidad": 0, "ventas": 0}
-            productos[clave]["cantidad"] += cant
+            clave_real = clave.split("|")[0]
+            if clave_real not in productos:
+                productos[clave_real] = {"cantidad": 0, "ventas": 0}
+            productos[clave_real]["cantidad"] += cant
 
     menu = menu_activo()
     for clave in productos:

@@ -1,9 +1,7 @@
-const CACHE_NAME = 'como-en-casa-v1';
+const CACHE_NAME = 'como-en-casa-v2';
 const urlsToCache = [
-  '/',
   '/static/style.css',
   '/static/manifest.json',
-  '/static/logo.png',
   '/static/icon-192.png'
 ];
 
@@ -37,17 +35,29 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Solo maneja GET (no POST)
+  // Solo maneja GET
   if (event.request.method !== 'GET') return;
 
+  // 🔥 NO cachear HTML ni JSON - siempre desde el servidor
+  const url = event.request.url;
+  if (url.endsWith('/') || url.includes('/admin') || url.includes('/chat') || url.includes('/pedido')) {
+    return; // Deja pasar la petición al servidor directamente
+  }
+
+  // Para CSS, imágenes, etc → red primero, caché como fallback
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        // Si falla la red y es HTML, devuelve la home
-        if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
-          return caches.match('/');
-        }
-      });
-    })
+    fetch(event.request)
+      .then((response) => {
+        // Actualiza el caché con la versión nueva
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
+        return response;
+      })
+      .catch(() => {
+        // Si falla la red, usa el caché
+        return caches.match(event.request);
+      })
   );
 });
