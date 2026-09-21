@@ -83,7 +83,7 @@
             <input type="text" id="cliente-telefono" placeholder="Tu teléfono (opcional)">
             <input type="text" id="cliente-direccion" placeholder="Dirección de entrega (opcional)">
 
-            <!-- 🔥 MÉTODO DE PAGO -->
+            <!-- MÉTODO DE PAGO -->
             <div class="metodo-pago">
                 <label class="pago-titulo">💳 Método de pago:</label>
                 <div class="pago-opciones">
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <!-- 🔥 BOLETA DE PAGO -->
+            <!-- BOLETA DE PAGO -->
             <div id="boleta-section" class="boleta-section oculto">
                 <label>📸 Sube tu boleta de pago:</label>
                 <input type="file" id="boleta-archivo" accept="image/*">
@@ -153,14 +153,30 @@
         };
         {% endfor %}
 
-        // ==================== CARRITO CON PERSISTENCIA ====================
-        // 🔥 Recuperar carrito guardado al cargar la página
-        let carrito = JSON.parse(localStorage.getItem("carritoComoEnCasa") || "{}");
+        // ==================== CARRITO CON PERSISTENCIA (localStorage) ====================
+        let carrito = {};
         let platilloActual = null;
 
-        // 🔥 Guardar carrito en localStorage
+        // 🔥 CARGAR carrito del localStorage al iniciar
+        try {
+            const guardado = localStorage.getItem("carritoComoEnCasa");
+            if (guardado) {
+                carrito = JSON.parse(guardado);
+                console.log("✅ Carrito recuperado:", Object.keys(carrito).length, "items");
+            }
+        } catch (e) {
+            console.error("❌ Error al cargar carrito:", e);
+            carrito = {};
+        }
+
+        // 🔥 GUARDAR carrito en localStorage
         function guardarCarrito() {
-            localStorage.setItem("carritoComoEnCasa", JSON.stringify(carrito));
+            try {
+                localStorage.setItem("carritoComoEnCasa", JSON.stringify(carrito));
+                console.log("💾 Carrito guardado:", Object.keys(carrito).length, "items");
+            } catch (e) {
+                console.error("❌ Error al guardar carrito:", e);
+            }
         }
 
         const carritoPanel = document.getElementById("carrito");
@@ -205,8 +221,8 @@
                 };
             }
             carrito[comboKey].cant++;
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
             mostrarToast("✅ " + data.nombre + " agregado");
             abrirCarrito();
         }
@@ -288,8 +304,8 @@
             }
             carrito[comboKey].cant++;
 
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
             mostrarToast("✅ " + data.nombre + " agregado");
             abrirCarrito();
             cerrarModal();
@@ -298,21 +314,21 @@
         function sumar(comboKey) {
             if (!carrito[comboKey]) return;
             carrito[comboKey].cant++;
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
         }
         function restar(comboKey) {
             if (!carrito[comboKey]) return;
             carrito[comboKey].cant--;
             if (carrito[comboKey].cant <= 0) delete carrito[comboKey];
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
         }
         function eliminar(comboKey) {
             if (!carrito[comboKey]) return;
             delete carrito[comboKey];
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
             mostrarToast("🗑️ Eliminado");
         }
         function cambiarCantidad(comboKey, valor) {
@@ -321,8 +337,8 @@
             if (isNaN(cant) || cant < 1) cant = 1;
             if (cant > 99) cant = 99;
             carrito[comboKey].cant = cant;
+            guardarCarrito();
             actualizarCarrito();
-            guardarCarrito();  // 🔥 Guardar
         }
 
         function actualizarCarrito() {
@@ -462,7 +478,7 @@
                 if (data.ok) {
                     alert("✅ ¡Pedido confirmado!\nPedido #" + data.pedido_id + "\nTotal: Q" + data.total.toFixed(2) + "\n\nGracias " + nombre);
                     carrito = {};
-                    localStorage.removeItem("carritoComoEnCasa");  // 🔥 Limpiar storage
+                    localStorage.removeItem("carritoComoEnCasa");
                     actualizarCarrito();
                     cerrarCarrito();
                     document.getElementById("cliente-nombre").value = "";
@@ -526,6 +542,7 @@
             }
         });
 
+        // ============ SERVICE WORKER (PWA) ============
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
@@ -538,9 +555,10 @@
             });
         }
 
-        // 🔥 Al cargar la página, si hay carrito guardado, actualizar la vista
+        // 🔥 ACTUALIZAR VISTA AL CARGAR (por si hay carrito guardado)
+        actualizarCarrito();
         if (Object.keys(carrito).length > 0) {
-            actualizarCarrito();
+            console.log("🔄 Mostrando carrito recuperado con", Object.keys(carrito).length, "items");
         }
     </script>
 </body>
