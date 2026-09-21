@@ -9,6 +9,8 @@ import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
+import cloudinary
+import cloudinary.uploader
 
 from menu import cargar_menu, guardar_menu, menu_activo
 from chatbot import responder
@@ -23,6 +25,14 @@ app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_123"
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+# 🔥 Configurar Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -323,13 +333,27 @@ def admin_subir_imagen():
     if not archivo_permitido(archivo.filename):
         return jsonify({"ok": False, "error": "Formato no permitido (usa PNG, JPG, WEBP o GIF)"}), 400
 
-    nombre_seguro = secure_filename(archivo.filename)
-    nombre_final = f"{int(time.time())}_{nombre_seguro}"
-    ruta = os.path.join(app.config['UPLOAD_FOLDER'], nombre_final)
-    archivo.save(ruta)
+    try:
+        # 🔥 SUBIR A CLOUDINARY (no al servidor local)
+        resultado = cloudinary.uploader.upload(
+            archivo,
+            folder="como-en-casa/platillos",
+            transformation=[
+                {"width": 800, "height": 600, "crop": "fill", "gravity": "auto"},
+                {"quality": "auto:good"}
+            ]
+        )
 
-    url = f"/static/uploads/{nombre_final}"
-    return jsonify({"ok": True, "url": url, "nombre": nombre_final})
+        url = resultado.get("secure_url")
+        print(f"✅ Imagen subida a Cloudinary: {url}")
+
+        return jsonify({"ok": True, "url": url, "nombre": resultado.get("public_id")})
+
+    except Exception as e:
+        print(f"❌ Error subiendo a Cloudinary: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": f"Error al subir: {str(e)}"}), 500
 
 
 # ------------------- PEDIDOS -------------------
