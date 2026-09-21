@@ -1380,3 +1380,74 @@ input[type="file"]:hover {
     main { max-width: 1400px; }
     .grid-menu { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* ============ MÉTODO DE PAGO ============ */
+.metodo-pago {
+    margin: .8rem 0 .5rem;
+    padding: .8rem;
+    background: #faf6f0;
+    border-radius: 12px;
+}
+.pago-titulo {
+    display: block;
+    font-weight: bold;
+    color: #3a1e0f;
+    margin-bottom: .5rem;
+    font-size: .9rem;
+}
+.pago-opciones {
+    display: flex;
+    gap: .5rem;
+}
+.pago-opcion {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    padding: .6rem;
+    background: white;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .2s;
+    font-weight: bold;
+    font-size: .85rem;
+    color: #555;
+}
+.pago-opcion:hover {
+    border-color: #e8a547;
+}
+.pago-opcion input[type="radio"] {
+    display: none;
+}
+.pago-opcion:has(input:checked) {
+    background: linear-gradient(135deg, #e8a547, #c88a2e);
+    color: #3a1e0f;
+    border-color: transparent;
+}
+
+/* ============ BOLETA DE PAGO ============ */
+.boleta-section {
+    margin: .5rem 0;
+    padding: .8rem;
+    background: #fff8e7;
+    border: 2px dashed #e8a547;
+    border-radius: 12px;
+}
+.boleta-section label {
+    display: block;
+    font-weight: bold;
+    color: #3a1e0f;
+    margin-bottom: .5rem;
+    font-size: .9rem;
+}
+.boleta-section.oculto {
+    display: none;
+}
+#boleta-preview img {
+    max-width: 150px;
+    border-radius: 10px;
+    margin-top: .5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}

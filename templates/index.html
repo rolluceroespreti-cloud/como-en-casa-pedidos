@@ -78,9 +78,34 @@
                 <span>Total:</span>
                 <strong id="total">Q0.00</strong>
             </div>
+
             <input type="text" id="cliente-nombre" placeholder="Tu nombre" required>
             <input type="text" id="cliente-telefono" placeholder="Tu teléfono (opcional)">
             <input type="text" id="cliente-direccion" placeholder="Dirección de entrega (opcional)">
+
+            <!-- 🔥 MÉTODO DE PAGO -->
+            <div class="metodo-pago">
+                <label class="pago-titulo">💳 Método de pago:</label>
+                <div class="pago-opciones">
+                    <label class="pago-opcion">
+                        <input type="radio" name="metodo-pago" value="efectivo" checked onchange="cambiarMetodoPago()">
+                        <span>💵 Efectivo</span>
+                    </label>
+                    <label class="pago-opcion">
+                        <input type="radio" name="metodo-pago" value="transferencia" onchange="cambiarMetodoPago()">
+                        <span>📱 Transferencia</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 🔥 BOLETA DE PAGO -->
+            <div id="boleta-section" class="boleta-section oculto">
+                <label>📸 Sube tu boleta de pago:</label>
+                <input type="file" id="boleta-archivo" accept="image/*">
+                <div id="boleta-preview"></div>
+                <input type="hidden" id="boleta-url" value="">
+            </div>
+
             <button class="btn-confirmar" onclick="confirmarPedido()">✅ Confirmar pedido</button>
         </div>
     </aside>
@@ -179,7 +204,7 @@
             abrirCarrito();
         }
 
-                function abrirModal(clave, data) {
+        function abrirModal(clave, data) {
             platilloActual = { clave: clave, data: data };
             document.getElementById("modal-titulo").innerText = "Personaliza tu " + data.nombre;
 
@@ -188,13 +213,11 @@
             cuerpo.innerHTML = "";
 
             opciones.forEach(function(op) {
-                // 🔥 Acepta varios formatos: "Nombre|10", "Nombre Q10", "Nombre - 10", "Nombre"
                 const partes = op.split(/[|]|\s+Q\s*|\s+-\s+/i);
                 const nombre = partes[0].trim();
                 let precioExtra = 0;
 
                 if (partes[1]) {
-                    // Limpia cualquier texto y deja solo el número
                     const precioLimpio = partes[1].replace(/[^0-9.]/g, '');
                     precioExtra = parseFloat(precioLimpio) || 0;
                 }
@@ -337,6 +360,48 @@
             }
         }
 
+        // ==================== MÉTODO DE PAGO ====================
+        function cambiarMetodoPago() {
+            const metodo = document.querySelector('input[name="metodo-pago"]:checked').value;
+            const boletaSection = document.getElementById("boleta-section");
+
+            if (metodo === "transferencia") {
+                boletaSection.classList.remove("oculto");
+            } else {
+                boletaSection.classList.add("oculto");
+            }
+        }
+
+        // Subir boleta
+        document.getElementById("boleta-archivo").addEventListener("change", async function(e) {
+            const archivo = e.target.files[0];
+            if (!archivo) return;
+
+            const preview = document.getElementById("boleta-preview");
+            preview.innerHTML = "<p style='color:#888'>⏳ Subiendo boleta...</p>";
+
+            const formData = new FormData();
+            formData.append("imagen", archivo);
+
+            try {
+                const res = await fetch("/subir_boleta", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (data.ok) {
+                    document.getElementById("boleta-url").value = data.url;
+                    preview.innerHTML = '<img src="' + data.url + '" style="max-width: 150px; border-radius: 10px; margin-top: .5rem;">';
+                } else {
+                    preview.innerHTML = '<p style="color: #e63946">❌ ' + data.error + '</p>';
+                }
+            } catch (err) {
+                preview.innerHTML = '<p style="color: #e63946">❌ Error de conexión</p>';
+            }
+        });
+
+        // ==================== CONFIRMAR PEDIDO ====================
         async function confirmarPedido() {
             if (Object.keys(carrito).length === 0) {
                 alert("Tu carrito está vacío");
@@ -346,6 +411,14 @@
             if (!nombre) {
                 alert("Escribe tu nombre");
                 document.getElementById("cliente-nombre").focus();
+                return;
+            }
+
+            const metodoPago = document.querySelector('input[name="metodo-pago"]:checked').value;
+            const boletaUrl = document.getElementById("boleta-url").value;
+
+            if (metodoPago === "transferencia" && !boletaUrl) {
+                alert("Por favor sube tu boleta de pago");
                 return;
             }
 
@@ -367,7 +440,10 @@
                 const res = await fetch("/pedido", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ pedido, nombre, telefono, direccion, detallesOpciones })
+                    body: JSON.stringify({
+                        pedido, nombre, telefono, direccion, detallesOpciones,
+                        metodoPago, boletaUrl
+                    })
                 });
                 const data = await res.json();
 
@@ -379,6 +455,8 @@
                     document.getElementById("cliente-nombre").value = "";
                     document.getElementById("cliente-telefono").value = "";
                     document.getElementById("cliente-direccion").value = "";
+                    document.getElementById("boleta-url").value = "";
+                    document.getElementById("boleta-preview").innerHTML = "";
                 } else {
                     alert("❌ Error: " + data.error);
                 }

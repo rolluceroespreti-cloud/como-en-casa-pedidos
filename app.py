@@ -37,7 +37,7 @@ cloudinary.config(
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 
@@ -47,10 +47,6 @@ def archivo_permitido(nombre):
 
 
 def parsear_opciones(opciones_texto):
-    """
-    Convierte el texto de opciones en lista de dicts.
-    Acepta: "Lechuga|10", "Lechuga Q10", "Lechuga - 10", "Lechuga"
-    """
     resultado = []
     if not opciones_texto:
         return resultado
@@ -166,6 +162,8 @@ def pedido():
         telefono = data.get("telefono", "")
         direccion = data.get("direccion", "")
         detalles_opciones = data.get("detallesOpciones", {})
+        metodo_pago = data.get("metodoPago", "efectivo")
+        boleta_url = data.get("boletaUrl", "")
 
         if not pedido_cliente:
             return jsonify({"ok": False, "error": "Pedido vacío"}), 400
@@ -199,6 +197,9 @@ def pedido():
             detalle_lineas.append(detalle_item)
 
         detalle = "\n".join(detalle_lineas)
+        detalle += f"\n\n💳 Pago: {metodo_pago.upper()}"
+        if boleta_url:
+            detalle += f"\n📸 Boleta: {boleta_url}"
 
         nuevo = crear_pedido(pedido_cliente, nombre, telefono, direccion, total_calculado, detalle)
         print(f"✅ Pedido #{nuevo['id']} guardado - Total: Q{total_calculado:.2f}")
@@ -208,6 +209,49 @@ def pedido():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/estado_pedido/<int:pedido_id>")
+def estado_pedido(pedido_id):
+    """Devuelve el estado de un pedido (para el cliente)."""
+    try:
+        pedidos = cargar_pedidos()
+        for p in pedidos:
+            if p["id"] == pedido_id:
+                return jsonify({"ok": True, "estado": p["estado"]})
+        return jsonify({"ok": False, "error": "Pedido no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/subir_boleta", methods=["POST"])
+def subir_boleta():
+    """Sube la boleta de pago del cliente (sin requerir admin)."""
+    if "imagen" not in request.files:
+        return jsonify({"ok": False, "error": "No se envió archivo"}), 400
+
+    archivo = request.files["imagen"]
+    if archivo.filename == "":
+        return jsonify({"ok": False, "error": "Archivo vacío"}), 400
+
+    if not archivo_permitido(archivo.filename):
+        return jsonify({"ok": False, "error": "Formato no permitido"}), 400
+
+    try:
+        resultado = cloudinary.uploader.upload(
+            archivo,
+            folder="como-en-casa/boletas",
+            transformation=[
+                {"width": 1000, "crop": "limit"},
+                {"quality": "auto:good"}
+            ]
+        )
+        url = resultado.get("secure_url")
+        print(f"✅ Boleta subida: {url}")
+        return jsonify({"ok": True, "url": url})
+    except Exception as e:
+        print(f"❌ Error subiendo boleta: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
@@ -301,7 +345,6 @@ def admin_guardar():
 
 @app.route("/admin/reordenar", methods=["POST"])
 def admin_reordenar():
-    """Reordena los platillos."""
     if not requiere_admin():
         return jsonify({"ok": False, "error": "No autorizado"}), 401
 
@@ -309,7 +352,6 @@ def admin_reordenar():
     nuevo_orden = data.get("orden", [])
 
     menu = cargar_menu()
-
     for i, clave in enumerate(nuevo_orden):
         if clave in menu:
             menu[clave]["orden"] = i + 1
@@ -331,10 +373,9 @@ def admin_subir_imagen():
         return jsonify({"ok": False, "error": "Archivo vacío"}), 400
 
     if not archivo_permitido(archivo.filename):
-        return jsonify({"ok": False, "error": "Formato no permitido (usa PNG, JPG, WEBP o GIF)"}), 400
+        return jsonify({"ok": False, "error": "Formato no permitido"}), 400
 
     try:
-        # 🔥 SUBIR A CLOUDINARY (no al servidor local)
         resultado = cloudinary.uploader.upload(
             archivo,
             folder="como-en-casa/platillos",
@@ -343,17 +384,12 @@ def admin_subir_imagen():
                 {"quality": "auto:good"}
             ]
         )
-
         url = resultado.get("secure_url")
         print(f"✅ Imagen subida a Cloudinary: {url}")
-
         return jsonify({"ok": True, "url": url, "nombre": resultado.get("public_id")})
-
     except Exception as e:
         print(f"❌ Error subiendo a Cloudinary: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"ok": False, "error": f"Error al subir: {str(e)}"}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ------------------- PEDIDOS -------------------
