@@ -16,7 +16,6 @@ body {
     background: #f7f7f9;
     color: #222;
     min-height: 100vh;
-    min-height: 100dvh;
     overflow-x: hidden;
 }
 
@@ -41,11 +40,20 @@ body {
 .hero-contenido { position: relative; z-index: 2; }
 
 .logo-hero {
-    max-width: 280px;
-    width: 80%;
+    max-width: 180px; /* Lo hacemos un poco más ancho para que se aprecie el texto */
+    width: 60%;       /* Ajuste responsive */
     height: auto;
     margin-bottom: 1rem;
+    /* Opcional: si el fondo del logo es muy diferente al del header, puedes darle un borde redondeado */
+    border-radius: 12px; 
     filter: drop-shadow(0 4px 15px rgba(0, 0, 0, .5));
+}
+
+/* Ajuste para celular */
+@media (max-width: 640px) {
+    .logo-hero {
+        max-width: 150px;
+    }
 }
 .hero p {
     font-size: 1.1rem;
@@ -139,29 +147,6 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
 .platillo:hover {
     transform: translateY(-6px);
     box-shadow: 0 12px 28px rgba(0,0,0,.15);
-}
-
-/* ============ IMAGEN DE PLATILLO ============ */
-.platillo-imagen {
-    width: 100%;
-    height: 180px;
-    overflow: hidden;
-    background: #faf6f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 20px 20px 0 0;
-}
-.platillo-imagen img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-    transition: transform .3s;
-}
-.platillo:hover .platillo-imagen img {
-    transform: scale(1.08);
 }
 
 .platillo-emoji {
@@ -401,83 +386,10 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
     margin-top: .5rem;
     transition: transform .15s, box-shadow .15s;
     box-shadow: 0 4px 12px rgba(58,30,15,.4);
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(232,165,71,.3);
 }
 .btn-confirmar:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(58,30,15,.6);
-}
-
-/* ============ MÉTODO DE PAGO ============ */
-.metodo-pago {
-    margin: .8rem 0 .5rem;
-    padding: .8rem;
-    background: #faf6f0;
-    border-radius: 12px;
-}
-.pago-titulo {
-    display: block;
-    font-weight: bold;
-    color: #3a1e0f;
-    margin-bottom: .5rem;
-    font-size: .9rem;
-}
-.pago-opciones {
-    display: flex;
-    gap: .5rem;
-}
-.pago-opcion {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: .3rem;
-    padding: .6rem;
-    background: white;
-    border: 2px solid #eee;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all .2s;
-    font-weight: bold;
-    font-size: .85rem;
-    color: #555;
-}
-.pago-opcion:hover {
-    border-color: #e8a547;
-}
-.pago-opcion input[type="radio"] {
-    display: none;
-}
-.pago-opcion:has(input:checked) {
-    background: linear-gradient(135deg, #e8a547, #c88a2e);
-    color: #3a1e0f;
-    border-color: transparent;
-}
-
-/* ============ BOLETA DE PAGO ============ */
-.boleta-section {
-    margin: .5rem 0;
-    padding: .8rem;
-    background: #fff8e7;
-    border: 2px dashed #e8a547;
-    border-radius: 12px;
-}
-.boleta-section label {
-    display: block;
-    font-weight: bold;
-    color: #3a1e0f;
-    margin-bottom: .5rem;
-    font-size: .9rem;
-}
-.boleta-section.oculto {
-    display: none;
-}
-#boleta-preview img {
-    max-width: 150px;
-    border-radius: 10px;
-    margin-top: .5rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,.15);
 }
 
 /* ============ CHAT ============ */
@@ -933,107 +845,6 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
     border-top: 5px solid var(--color, #3a1e0f);
     transition: background .3s;
 }
-
-/* ============ IMAGEN EN EL ADMIN ============ */
-.admin-platillo-imagen {
-    width: 100%;
-    height: 140px;
-    background: #faf6f0;
-    border-radius: 10px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: .5rem;
-    position: relative;
-}
-
-.admin-platillo-imagen img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-}
-
-.sin-imagen {
-    font-size: 3rem;
-    color: #999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    background: #faf6f0;
-}
-
-.admin-imagen-acciones {
-    display: flex;
-    justify-content: center;
-    margin-bottom: .5rem;
-}
-
-.btn-cambiar-img {
-    background: linear-gradient(135deg, #8b5a2b, #6b3a1a);
-    color: white;
-    padding: .4rem .9rem;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: .8rem;
-    font-weight: bold;
-    transition: transform .15s;
-    display: inline-block;
-}
-
-.btn-cambiar-img:hover {
-    transform: scale(1.05);
-}
-
-/* ============ CONTROLES DE ORDEN ============ */
-.orden-controles {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: .5rem;
-    background: #faf6f0;
-    border-radius: 10px;
-    margin-bottom: .5rem;
-    gap: .3rem;
-}
-
-.orden-numero {
-    font-weight: bold;
-    color: #c88a2e;
-    font-size: .9rem;
-    min-width: 30px;
-}
-
-.btn-orden {
-    background: linear-gradient(135deg, #e8a547, #c88a2e);
-    color: #3a1e0f;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: .9rem;
-    font-weight: bold;
-    transition: transform .15s, box-shadow .15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-orden:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 10px rgba(232, 165, 71, 0.4);
-}
-
-.btn-orden:active {
-    transform: scale(.95);
-}
-
-/* ============ ADMIN PLATILLO HEADER ============ */
 .admin-platillo-header {
     display: flex;
     justify-content: space-between;
@@ -1184,6 +995,137 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
     color: #3a1e0f;
 }
 
+/* ============ RESPONSIVE ============ */
+@media (max-width: 900px) {
+    .logo-hero { max-width: 220px; }
+    .grid-menu { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.2rem; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 640px) {
+    .hero { padding: 2rem 1rem 4rem; }
+    .logo-hero { max-width: 200px; }
+    .hero p { font-size: .95rem; }
+    .hero-olas svg { height: 40px; }
+    .btn-carrito { padding: .7rem 1.2rem; font-size: .95rem; }
+
+    main { padding: 1.5rem 1rem 5rem; }
+    .menu-section h2 { font-size: 1.5rem; margin-bottom: 1.2rem; }
+
+    .grid-menu { grid-template-columns: repeat(2, 1fr); gap: .8rem; }
+    .platillo { border-radius: 16px; }
+    .platillo-emoji { font-size: 3.5rem; padding: 1rem 0 .6rem; }
+    .platillo-info { padding: .8rem .9rem 1rem; }
+    .platillo-info h3 { font-size: 1rem; }
+    .platillo-info .desc { font-size: .78rem; min-height: 1.8rem; margin-bottom: .6rem; }
+    .platillo-footer { flex-direction: column; align-items: stretch; gap: .5rem; }
+    .precio { font-size: 1.15rem; text-align: center; }
+    .btn-agregar { width: 100%; padding: .6rem; font-size: .85rem; }
+
+    .carrito {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        top: 0;
+        right: 0;
+        left: 0;
+        border-radius: 0;
+        animation: slideUp .3s ease-out;
+    }
+    @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+    }
+    .carrito-header { border-radius: 0; }
+    .carrito-footer { border-radius: 0; }
+
+    .chat-widget {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        border-radius: 0;
+    }
+    .chat-header { border-radius: 0; }
+    .btn-chat-flotante { width: 55px; height: 55px; font-size: 1.4rem; bottom: 1rem; right: 1rem; }
+
+    input, button { font-size: 16px; }
+
+    .stats-grid { grid-template-columns: 1fr; }
+    .lista-pedidos { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .admin-platillo-acciones button { padding: .5rem; font-size: .8rem; }
+}
+
+@media (max-width: 380px) {
+    .logo-hero { max-width: 160px; }
+    .grid-menu { grid-template-columns: 1fr; }
+    .platillo-emoji { font-size: 4rem; }
+}
+
+@media (min-width: 1400px) {
+    main { max-width: 1400px; }
+    .grid-menu { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ============ MARCA DE AGUA TORO (opcional) ============ */
+.hero::after {
+    content: "";
+    position: absolute;
+    right: -50px;
+    bottom: -30px;
+    width: 280px;
+    height: 280px;
+    background-image: url('/static/toro.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (max-width: 640px) {
+    .hero::after {
+        width: 160px;
+        height: 160px;
+        right: -40px;
+        bottom: -20px;
+    }
+}
+
+/* ============ IMAGEN DE PLATILLO ============ */
+.platillo-imagen {
+    width: 100%;
+    height: 180px;              /* Altura fija */
+    overflow: hidden;            /* Corta lo que se salga */
+    background: #faf6f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px 20px 0 0;
+}
+
+.platillo-imagen img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;          /* ⭐ CLAVE: recorta y ajusta sin deformar */
+    object-position: center;     /* Centra la imagen */
+    display: block;
+    transition: transform .3s;
+}
+
+.platillo:hover .platillo-imagen img {
+    transform: scale(1.08);
+}
+
+/* ============ AJUSTES PARA MÓVIL ============ */
+@media (max-width: 640px) {
+    .platillo-imagen {
+        height: 140px;              /* Un poco más pequeña en móvil */
+    }
+}
 /* ============ MODAL DE OPCIONES ============ */
 .modal {
     position: fixed;
@@ -1317,423 +1259,53 @@ main { padding: 2rem 1.5rem 6rem; max-width: 1200px; margin: auto; }
     font-size: .8rem;
 }
 
-/* ============ INPUT FILE ============ */
-input[type="file"] {
-    padding: .6rem;
-    border: 2px dashed #e8a547;
-    border-radius: 10px;
-    background: #faf6f0;
-    cursor: pointer;
-    width: 100%;
-    font-family: inherit;
-    color: #3a1e0f;
-}
-input[type="file"]:hover {
-    background: #f4d8b1;
-}
-
-/* ============ MARCA DE AGUA TORO ============ */
-.hero::after {
-    content: "";
-    position: absolute;
-    right: -50px;
-    bottom: -30px;
-    width: 280px;
-    height: 280px;
-    background-image: url('/static/toro.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    opacity: 0.08;
-    pointer-events: none;
-    z-index: 1;
-}
-
-/* ==========================================================
-   RESPONSIVE
-   ========================================================== */
-@media (max-width: 900px) {
-    .logo-hero { max-width: 220px; }
-    .grid-menu { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.2rem; }
-    .form-grid { grid-template-columns: 1fr 1fr; }
-}
-
-/* 📱 MÓVIL */
 @media (max-width: 640px) {
-    .hero { padding: 2rem 1rem 4rem; }
-    .logo-hero { max-width: 200px; }
-    .hero p { font-size: .95rem; }
-    .hero-olas svg { height: 40px; }
-    .btn-carrito { padding: .7rem 1.2rem; font-size: .95rem; }
-
-    main { padding: 1.5rem 1rem 5rem; }
-    .menu-section h2 { font-size: 1.5rem; margin-bottom: 1.2rem; }
-
-    .grid-menu { grid-template-columns: repeat(2, 1fr); gap: .8rem; }
-    .platillo { border-radius: 16px; }
-    .platillo-emoji { font-size: 3.5rem; padding: 1rem 0 .6rem; }
-    .platillo-imagen { height: 140px; }
-    .platillo-info { padding: .8rem .9rem 1rem; }
-    .platillo-info h3 { font-size: 1rem; }
-    .platillo-info .desc { font-size: .78rem; min-height: 1.8rem; margin-bottom: .6rem; }
-    .platillo-footer { flex-direction: column; align-items: stretch; gap: .5rem; }
-    .precio { font-size: 1.15rem; text-align: center; }
-    .btn-agregar { width: 100%; padding: .6rem; font-size: .85rem; }
-
-    /* 🔥 CARRITO EN MÓVIL — Layout vertical flex */
-    .carrito {
-        width: 100%;
-        height: 100dvh;
-        max-height: 100dvh;
-        top: 0;
-        right: 0;
-        left: 0;
-        border-radius: 0;
-        animation: slideUp .3s ease-out;
-        display: flex;
-        flex-direction: column;
-    }
-    @keyframes slideUp {
-        from { transform: translateY(100%); }
-        to   { transform: translateY(0); }
-    }
-    .carrito-header {
-        border-radius: 0;
-        flex-shrink: 0;
-    }
-    /* 🔥 Items con scroll */
-    .carrito-items {
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: .8rem;
-    }
-    /* 🔥 Footer con scroll interno si es necesario */
-    .carrito-footer {
-        border-radius: 0;
-        flex-shrink: 0;
-        padding: 1rem 1.2rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1.2rem;
-        background: white;
-        box-shadow: 0 -4px 20px rgba(0,0,0,.15);
-        border-top: 1px solid #eee;
-        max-height: 60vh;
-        overflow-y: auto;
-    }
-    .btn-confirmar {
-        padding: 1rem;
-        font-size: 1rem;
-        width: 100%;
-    }
-
-    /* Reducir tamaños del pago en móvil */
-    .metodo-pago { padding: .6rem; margin: .4rem 0; }
-    .pago-opcion { padding: .5rem; font-size: .8rem; }
-    .boleta-section { padding: .6rem; margin: .4rem 0; }
-    #boleta-preview img { max-width: 100px !important; }
-
-    /* Chat en móvil */
-    .chat-widget {
-        width: 100%;
-        height: 100vh;
-        max-height: 100vh;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        border-radius: 0;
-    }
-    .chat-header { border-radius: 0; }
-    .btn-chat-flotante { width: 55px; height: 55px; font-size: 1.4rem; bottom: 1rem; right: 1rem; }
-
-    input, button { font-size: 16px; }
-
-    .stats-grid { grid-template-columns: 1fr; }
-    .lista-pedidos { grid-template-columns: 1fr; }
-    .form-grid { grid-template-columns: 1fr; }
-    .admin-platillo-acciones button { padding: .5rem; font-size: .8rem; }
-
     .modal-contenido {
         max-height: 90vh;
         border-radius: 20px 20px 0 0;
         align-self: flex-end;
     }
-
-    .hero::after {
-        width: 160px;
-        height: 160px;
-        right: -40px;
-        bottom: -20px;
-    }
 }
-
-@media (max-width: 380px) {
-    .logo-hero { max-width: 160px; }
-    .grid-menu { grid-template-columns: 1fr; }
-    .platillo-emoji { font-size: 4rem; }
-}
-
-@media (min-width: 1400px) {
-    main { max-width: 1400px; }
-    .grid-menu { grid-template-columns: repeat(4, 1fr); }
-}
-
-/* ============ BOTÓN FIJO AL FONDO DEL CARRITO ============ */
-.carrito-boton-fijo {
-    padding: .8rem 1.2rem;
-    padding-bottom: calc(.8rem + env(safe-area-inset-bottom, 0px));
-    background: white;
-    border-top: 2px solid #e8a547;
-    box-shadow: 0 -4px 15px rgba(0,0,0,.15);
-    flex-shrink: 0;
-    z-index: 20;
-}
-
-.carrito-boton-fijo .btn-confirmar {
-    width: 100%;
-    margin: 0;
-    position: static;
-}
-
-/* En móvil - Footer con scroll interno */
-@media (max-width: 640px) {
-    .carrito-footer {
-        max-height: 55vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 1rem 1rem .5rem 1rem;
-    }
-
-    .carrito-boton-fijo {
-        padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1rem;
-    }
-
-    .btn-confirmar {
-        padding: 1.1rem;
-        font-size: 1.1rem;
-    }
-
-    .carrito-footer input {
-        padding: .6rem .8rem;
-        font-size: .95rem;
-    }
-
-    .metodo-pago {
-        padding: .5rem;
-        margin: .4rem 0;
-    }
-
-    .boleta-section {
-        padding: .5rem;
-        margin: .4rem 0;
-    }
-
-    #boleta-preview img {
-        max-width: 100px !important;
-    }
-}
-
-/* ============ BOTÓN FIJO AL FONDO DEL CARRITO ============ */
-.carrito-boton-fijo {
-    padding: .9rem 1.2rem;
-    padding-bottom: calc(.9rem + env(safe-area-inset-bottom, 0px));
-    background: white;
-    border-top: 2px solid #e8a547;
-    box-shadow: 0 -4px 15px rgba(0,0,0,.15);
-    flex-shrink: 0;
-    z-index: 20;
-}
-
-.carrito-boton-fijo .btn-confirmar {
-    width: 100%;
-    margin: 0;
-    position: static;
-    padding: 1rem;
-    font-size: 1.05rem;
-}
-
-/* En móvil - que el botón sea más grande y el footer tenga scroll interno */
-@media (max-width: 640px) {
-    .carrito-footer {
-        max-height: 50vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 1rem 1rem .8rem 1rem;
-    }
-
-    .carrito-boton-fijo {
-        padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) 1rem;
-    }
-
-    .carrito-boton-fijo .btn-confirmar {
-        padding: 1.1rem;
-        font-size: 1.1rem;
-    }
-}
-
-/* ============ BOTÓN DE SEGUIMIENTO ============ */
-.btn-seguimiento {
-    background: linear-gradient(135deg, #4cc9f0, #3aa8cc);
-    color: white;
-    border: none;
-    padding: .8rem 1.5rem;
-    border-radius: 40px;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: 0 6px 20px rgba(76,201,240,.5);
-    transition: transform .2s;
-    margin-top: .5rem;
-    animation: pulseSeguimiento 2s infinite;
-}
-.btn-seguimiento:hover { transform: scale(1.05); }
-.btn-seguimiento.oculto { display: none !important; }
-
-@keyframes pulseSeguimiento {
-    0%, 100% { box-shadow: 0 6px 20px rgba(76,201,240,.5); }
-    50%      { box-shadow: 0 6px 30px rgba(76,201,240,.8); }
-}
-
-/* ============ MODAL DE SEGUIMIENTO ============ */
-.estado-pedido {
-    text-align: center;
-    padding: 1.5rem 1rem;
-    border-bottom: 2px dashed #eee;
-    margin-bottom: 1rem;
-}
-.estado-icono {
-    font-size: 4rem;
-    margin-bottom: .5rem;
-    animation: bounce 1s infinite;
-}
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-10px); }
-}
-.estado-pedido h4 { color: #3a1e0f; font-size: 1.3rem; margin-bottom: .3rem; }
-.estado-pedido p { color: #666; font-size: .95rem; }
-
-.estado-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: .6rem;
-    padding: 0 1rem;
-}
-.estado-paso {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: .8rem;
-    background: #faf6f0;
-    border-radius: 12px;
-    opacity: 0.4;
-    transition: all .3s;
-}
-.estado-paso.completado {
-    opacity: 1;
-    background: linear-gradient(135deg, #d4edda, #c3e6cb);
-    border-left: 4px solid #7fb069;
-}
-.estado-paso span { font-size: 1.8rem; flex-shrink: 0; }
-.estado-paso strong { display: block; color: #3a1e0f; font-size: .95rem; }
-.estado-paso small { color: #666; font-size: .8rem; }
-
-/* ============ BOLETA EN EL ADMIN ============ */
-.boleta-admin {
-    margin: .5rem 0;
-    padding: .6rem;
-    background: #fff8e7;
-    border: 2px solid #e8a547;
-    border-radius: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: .5rem;
-    align-items: center;
-}
-
-.btn-ver-boleta {
-    background: linear-gradient(135deg, #4cc9f0, #3aa8cc);
-    color: white;
-    padding: .5rem 1rem;
-    border-radius: 20px;
-    text-decoration: none;
-    font-weight: bold;
-    font-size: .85rem;
-    transition: transform .15s;
-    display: inline-block;
-}
-.btn-ver-boleta:hover { transform: scale(1.05); }
-
-.boleta-thumb {
-    max-width: 120px;
-    max-height: 120px;
-    border-radius: 8px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,.15);
-    transition: transform .15s;
-    object-fit: cover;
-}
-.boleta-thumb:hover { transform: scale(1.05); }
-
-.badge-pago {
-    display: inline-block;
-    color: white;
-    padding: .2rem .7rem;
-    border-radius: 15px;
-    font-size: .8rem;
-    font-weight: bold;
-}
-
-/* ============ TOTAL EN EL SEGUIMIENTO ============ */
-.estado-total {
-    margin-top: 1rem;
-    padding: .8rem 1rem;
-    background: linear-gradient(135deg, #fff8e7, #f4d8b1);
-    border-radius: 12px;
+/* ============ CONTROLES DE ORDEN ============ */
+.orden-controles {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border: 2px solid #e8a547;
-}
-.estado-total span {
-    font-weight: bold;
-    color: #3a1e0f;
-}
-.estado-total strong {
-    font-size: 1.3rem;
-    color: #c88a2e;
+    padding: .5rem;
+    background: #faf6f0;
+    border-radius: 10px;
+    margin-bottom: .5rem;
+    gap: .3rem;
 }
 
-/* ============ DETALLE DEL PEDIDO ============ */
-.detalle-pedido {
-    background: #faf6f0;
-    padding: 1rem;
-    border-radius: 12px;
-    margin: 1rem 0;
-    border-left: 4px solid #e8a547;
-}
-.detalle-pedido h5 {
-    color: #3a1e0f;
-    margin-bottom: .6rem;
-    font-size: .95rem;
-}
-#detalle-pedido-items {
-    display: flex;
-    flex-direction: column;
-    gap: .4rem;
-}
-.detalle-item {
-    padding: .5rem .7rem;
-    background: white;
-    border-radius: 8px;
-    font-size: .85rem;
-    color: #333;
-    border-left: 3px solid #e8a547;
-}
-.detalle-pago {
-    margin-top: .5rem;
-    padding: .5rem .7rem;
-    background: linear-gradient(135deg, #d4edda, #c3e6cb);
-    border-radius: 8px;
-    font-size: .85rem;
+.orden-numero {
     font-weight: bold;
-    color: #155724;
-    text-align: center;
+    color: #c88a2e;
+    font-size: .9rem;
+    min-width: 30px;
+}
+
+.btn-orden {
+    background: linear-gradient(135deg, #e8a547, #c88a2e);
+    color: #3a1e0f;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .9rem;
+    font-weight: bold;
+    transition: transform .15s, box-shadow .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-orden:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(232, 165, 71, 0.4);
+}
+
+.btn-orden:active {
+    transform: scale(.95);
 }
